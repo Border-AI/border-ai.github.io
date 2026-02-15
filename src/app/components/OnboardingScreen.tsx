@@ -1,6 +1,6 @@
 import React from 'react';
 import { Gauge, FileText, Sparkles } from 'lucide-react';
-import logoImage from '../../../images/Border AI logo 3.svg';
+const logoImage = "/border-ai-logo.svg";
 import { Button } from './ui/button';
 
 interface OnboardingScreenProps {
