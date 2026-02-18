@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { WelcomeScreen } from './components/WelcomeScreen';
+import React, { useEffect, useState } from 'react';
 import { SignUpScreen } from './components/SignUpScreen';
 import { LoginScreen } from './components/LoginScreen';
 import { SetupQuestionnaire, QuestionnaireData } from './components/SetupQuestionnaire';
@@ -18,7 +17,6 @@ import { OnboardingScreen } from './components/OnboardingScreen';
 
 export type Screen =
   | 'onboarding'
-  | 'welcome'
   | 'signup'
   | 'login'
   | 'setup-questionnaire'
@@ -73,8 +71,20 @@ const USER_ACCOUNTS: Record<string, { password: string; userData: UserData }> = 
   },
 };
 
+function getInitialScreen(): Screen {
+  if (typeof window === 'undefined') {
+    return 'onboarding';
+  }
+  const params = new URLSearchParams(window.location.search);
+  const screen = params.get('screen');
+  if (screen === 'login' || screen === 'signup') {
+    return screen;
+  }
+  return 'onboarding';
+}
+
 export default function App() {
-  const [currentScreen, setCurrentScreen] = useState<Screen>('onboarding');
+  const [currentScreen, setCurrentScreen] = useState<Screen>(() => getInitialScreen());
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [setupComplete, setSetupComplete] = useState(false);
   const [currentProject, setCurrentProject] = useState<string | null>(null);
@@ -83,6 +93,17 @@ export default function App() {
   const [questionnaireData, setQuestionnaireData] = useState<QuestionnaireData | null>(null);
   const [isDemoUser, setIsDemoUser] = useState(false);
   const [userData, setUserData] = useState<UserData | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.has('screen')) {
+      url.searchParams.delete('screen');
+      const query = url.searchParams.toString();
+      const nextUrl = `${url.pathname}${query ? `?${query}` : ''}${url.hash}`;
+      window.history.replaceState({}, '', nextUrl);
+    }
+  }, []);
 
   const handleLogin = (isDemoUserFlag?: boolean, email?: string, password?: string) => {
     // Check if user account exists and password matches
@@ -219,15 +240,6 @@ export default function App() {
       return (
         <OnboardingScreen
           onEstimateChance={() => navigateWithHistory('signup')}
-          onLogin={() => navigateWithHistory('login')}
-        />
-      );
-    }
-
-    if (currentScreen === 'welcome') {
-      return (
-        <WelcomeScreen
-          onGetStarted={() => navigateWithHistory('signup')}
           onLogin={() => navigateWithHistory('login')}
         />
       );

@@ -29,6 +29,7 @@
   function renderHome(homeContent) {
     if (!homeContent) return;
     renderHero(homeContent.hero);
+    renderHighlights(homeContent.highlights);
     renderFeatures(homeContent.features);
     renderEligibilityCallout(homeContent.eligibilityCallout);
     renderPricing(homeContent.pricing);
@@ -102,6 +103,68 @@
     });
 
     target.replaceChildren(grid);
+  }
+
+  function renderHighlights(highlights) {
+    const target = document.querySelector('[data-section="highlights"]');
+    if (!target || !highlights) return;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'highlights-section';
+
+    const intro = document.createElement('div');
+    intro.className = 'highlights-intro';
+
+    if (highlights.eyebrow) {
+      const eyebrow = document.createElement('span');
+      eyebrow.className = 'note-pill';
+      eyebrow.textContent = highlights.eyebrow;
+      intro.appendChild(eyebrow);
+    }
+
+    if (highlights.title) {
+      const heading = document.createElement('h2');
+      heading.textContent = highlights.title;
+      intro.appendChild(heading);
+    }
+
+    if (highlights.subtitle) {
+      const copy = document.createElement('p');
+      copy.textContent = highlights.subtitle;
+      intro.appendChild(copy);
+    }
+
+    wrapper.appendChild(intro);
+
+    if (Array.isArray(highlights.cards)) {
+      const grid = document.createElement('div');
+      grid.className = 'highlight-grid';
+
+      highlights.cards.forEach((card) => {
+        const cardEl = document.createElement('article');
+        cardEl.className = 'highlight-card';
+
+        const iconWrap = document.createElement('div');
+        iconWrap.className = 'highlight-icon';
+        const iconSvg = createHighlightIcon(card.icon);
+        if (iconSvg) {
+          iconWrap.appendChild(iconSvg);
+        }
+
+        const title = document.createElement('h3');
+        title.textContent = card.title;
+
+        const description = document.createElement('p');
+        description.textContent = card.description;
+
+        cardEl.append(iconWrap, title, description);
+        grid.appendChild(cardEl);
+      });
+
+      wrapper.appendChild(grid);
+    }
+
+    target.replaceChildren(wrapper);
   }
 
   function renderEligibilityCallout(callout) {
@@ -224,3 +287,57 @@
     target.replaceChildren(card);
   }
 })();
+
+function createHighlightIcon(type) {
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(svgNS, 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('stroke-width', '1.5');
+  svg.setAttribute('stroke-linecap', 'round');
+  svg.setAttribute('stroke-linejoin', 'round');
+
+  const appendChild = (el) => svg.appendChild(el);
+
+  if (type === 'target') {
+    const circles = [10, 6, 3].map((radius) => {
+      const circle = document.createElementNS(svgNS, 'circle');
+      circle.setAttribute('cx', '12');
+      circle.setAttribute('cy', '12');
+      circle.setAttribute('r', radius.toString());
+      circle.setAttribute('stroke-opacity', radius === 3 ? '1' : '0.85');
+      return circle;
+    });
+    circles.forEach(appendChild);
+  } else if (type === 'folder') {
+    const body = document.createElementNS(svgNS, 'path');
+    body.setAttribute('d', 'M3 7h7l2 2h9v8a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7z');
+    const tab = document.createElementNS(svgNS, 'path');
+    tab.setAttribute('d', 'M3 7V5a1 1 0 0 1 1-1h5l2 2h4');
+    [body, tab].forEach(appendChild);
+  } else if (type === 'graph') {
+    const lines = [
+      { x1: 5, y1: 12, x2: 5, y2: 19 },
+      { x1: 10, y1: 9, x2: 10, y2: 19 },
+      { x1: 15, y1: 5, x2: 15, y2: 19 },
+      { x1: 20, y1: 14, x2: 20, y2: 19 }
+    ];
+    lines.forEach(({ x1, y1, x2, y2 }) => {
+      const line = document.createElementNS(svgNS, 'line');
+      line.setAttribute('x1', x1.toString());
+      line.setAttribute('y1', y1.toString());
+      line.setAttribute('x2', x2.toString());
+      line.setAttribute('y2', y2.toString());
+      appendChild(line);
+    });
+  } else {
+    const circle = document.createElementNS(svgNS, 'circle');
+    circle.setAttribute('cx', '12');
+    circle.setAttribute('cy', '12');
+    circle.setAttribute('r', '9');
+    appendChild(circle);
+  }
+
+  return svg;
+}

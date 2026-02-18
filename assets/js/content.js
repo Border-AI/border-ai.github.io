@@ -17,7 +17,7 @@ window.siteContent = {
     links: [
       { label: "Pricing", href: "/#pricing" },
       { label: "Contact us", href: "/#contact" },
-      { label: "Log in / sign up", href: "/app/" }
+      { label: "Log in / sign up", href: "/app/?screen=login" }
     ],
     cta: { label: "Eligibility check", href: "/eligibility-check/" }
   },
@@ -52,6 +52,27 @@ window.siteContent = {
       seo: {
         title: "Border AI · Your AI visa assistant and advisor",
         description: "Find visa pathways, understand requirements, and prep faster with Border AI."
+      },
+      highlights: {
+        eyebrow: "Clarity in minutes",
+        title: "Instant guidance before you ever apply",
+        cards: [
+          {
+            title: "Approval chance estimation",
+            description: "AI scoring to gauge your readiness in seconds.",
+            icon: "target"
+          },
+          {
+            title: "Doc preparation",
+            description: "Auto-organized forms, checklists, and evidence.",
+            icon: "folder"
+          },
+          {
+            title: "Data-based suggestions",
+            description: "Guidance grounded in IRCC updates and case data.",
+            icon: "graph"
+          }
+        ]
       },
       hero: {
         eyebrow: "AI visa co-pilot",
