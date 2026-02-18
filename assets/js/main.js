@@ -257,34 +257,9 @@
   }
 
   function renderEligibility(eligibility) {
-    const target = document.querySelector('[data-section="eligibility"]');
-    if (!target || !eligibility) return;
-
-    const card = document.createElement('section');
-    card.className = 'eligibility-card';
-
-    const heading = document.createElement('h1');
-    heading.textContent = eligibility.heading;
-
-    const body = document.createElement('p');
-    body.textContent = eligibility.body;
-
-    const actions = document.createElement('div');
-    actions.className = 'hero-actions';
-
-    const primary = document.createElement('a');
-    primary.className = 'btn btn-primary';
-    primary.href = eligibility.primaryCta.href;
-    primary.textContent = eligibility.primaryCta.label;
-
-    const secondary = document.createElement('a');
-    secondary.className = 'btn btn-secondary';
-    secondary.href = eligibility.secondaryCta.href;
-    secondary.textContent = eligibility.secondaryCta.label;
-
-    actions.append(primary, secondary);
-    card.append(heading, body, actions);
-    target.replaceChildren(card);
+    if (!eligibility) return;
+    renderEligibilityHero(eligibility.hero);
+    initEligibilityFlow(eligibility.flow);
   }
 })();
 
@@ -340,4 +315,501 @@ function createHighlightIcon(type) {
   }
 
   return svg;
+}
+
+function renderEligibilityHero(hero) {
+  const target = document.querySelector('[data-section="eligibility-hero"]');
+  if (!target || !hero) return;
+
+  const card = document.createElement('div');
+  card.className = 'eligibility-hero-card';
+
+  const title = document.createElement('h1');
+  title.textContent = hero.title;
+
+  const body = document.createElement('p');
+  body.textContent = hero.body;
+
+  const note = document.createElement('div');
+  note.className = 'note-pill';
+  note.textContent = hero.note || '';
+
+  card.append(note, title, body);
+  target.replaceChildren(card);
+}
+
+function initEligibilityFlow(flowContent) {
+  const target = document.querySelector('[data-section="eligibility-flow"]');
+  if (!target || !flowContent) return;
+
+  const state = {
+    stage: 'visa',
+    visaIndex: 0,
+    eligibilityIndex: 0,
+    visaAnswers: {},
+    eligibilityAnswers: {},
+    email: '',
+    emailStatus: 'idle'
+  };
+
+  const render = () => {
+    target.replaceChildren(buildFlow(flowContent, state, render));
+  };
+
+  render();
+}
+
+function buildFlow(flowContent, state, rerender) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'eligibility-flow-wrapper';
+
+  const visaSection = document.createElement('section');
+  visaSection.className = 'eligibility-flow-section';
+  visaSection.appendChild(buildSectionHeader(flowContent.visaMatch.title, flowContent.visaMatch.description));
+
+  const activeVisaQuestions = getVisaQuestions(flowContent.visaMatch.questions, state.visaAnswers);
+  if (state.visaIndex >= activeVisaQuestions.length) {
+    state.visaIndex = Math.max(activeVisaQuestions.length - 1, 0);
+  }
+
+  if (state.stage === 'visa' && activeVisaQuestions.length) {
+    visaSection.appendChild(
+      buildQuestionCard({
+        question: activeVisaQuestions[state.visaIndex],
+        currentIndex: state.visaIndex,
+        total: activeVisaQuestions.length,
+        answers: state.visaAnswers,
+        nextLabel: state.visaIndex === activeVisaQuestions.length - 1 ? 'See result' : 'Continue',
+        onAnswer: (id, value) => {
+          state.visaAnswers[id] = value;
+          if (id === 'intent' && value === 'visit') {
+            delete state.visaAnswers.situation;
+          }
+          rerender();
+        },
+        onPrev: () => {
+          if (state.visaIndex > 0) {
+            state.visaIndex -= 1;
+            rerender();
+          }
+        },
+        onNext: () => {
+          const question = activeVisaQuestions[state.visaIndex];
+          const currentValue = state.visaAnswers[question.id];
+          if (!currentValue) return;
+          if (state.visaIndex < activeVisaQuestions.length - 1) {
+            state.visaIndex += 1;
+            rerender();
+          } else {
+            state.stage = 'visa-result';
+            rerender();
+          }
+        }
+      })
+    );
+  } else {
+    const resultCard = document.createElement('div');
+    resultCard.className = 'result-card';
+    const visaResult = computeVisaResult(state.visaAnswers);
+
+    const heading = document.createElement('p');
+    heading.className = 'result-eyebrow';
+    heading.textContent = flowContent.visaMatch.result.heading;
+
+    const title = document.createElement('h2');
+    title.textContent = visaResult.title;
+
+    const summary = document.createElement('p');
+    summary.textContent = visaResult.summary;
+
+    const choiceList = document.createElement('ul');
+    choiceList.className = 'summary-list';
+    visaResult.highlights.forEach((item) => {
+      const li = document.createElement('li');
+      li.textContent = item;
+      choiceList.appendChild(li);
+    });
+
+    const refList = document.createElement('div');
+    refList.className = 'reference-links';
+    flowContent.visaMatch.result.references.forEach((ref) => {
+      const link = document.createElement('a');
+      link.href = ref.href;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.textContent = ref.label;
+      refList.appendChild(link);
+    });
+
+    resultCard.append(heading, title, summary, choiceList, refList);
+    visaSection.appendChild(resultCard);
+    visaSection.appendChild(
+      buildStickyCta({
+        copy: flowContent.visaMatch.cta.title,
+        primaryLabel: flowContent.visaMatch.cta.primaryLabel,
+        secondaryLabel: flowContent.visaMatch.cta.secondaryLabel,
+        onPrimary: () => {
+          state.stage = 'eligibility';
+          state.eligibilityIndex = 0;
+          rerender();
+        },
+        onSecondary: () => {
+          state.stage = 'visa';
+          state.visaIndex = Math.max(activeVisaQuestions.length - 1, 0);
+          rerender();
+        }
+      })
+    );
+  }
+
+  wrapper.appendChild(visaSection);
+
+  if (state.stage === 'eligibility') {
+    wrapper.appendChild(
+      buildEligibilitySection(flowContent, state, rerender, false)
+    );
+  } else if (state.stage === 'summary') {
+    wrapper.appendChild(
+      buildEligibilitySection(flowContent, state, rerender, true)
+    );
+  }
+
+  return wrapper;
+}
+
+function buildSectionHeader(title, description) {
+  const header = document.createElement('div');
+  header.className = 'eligibility-section-header';
+  const label = document.createElement('p');
+  label.className = 'section-eyebrow';
+  label.textContent = title;
+  const desc = document.createElement('p');
+  desc.textContent = description;
+  header.append(label, desc);
+  return header;
+}
+
+function buildQuestionCard({ question, currentIndex, total, answers, onAnswer, onPrev, onNext, nextLabel, disablePrev }) {
+  const card = document.createElement('div');
+  card.className = 'question-card';
+
+  const progress = document.createElement('div');
+  progress.className = 'question-progress';
+  const label = document.createElement('span');
+  label.textContent = `Question ${total ? currentIndex + 1 : 0}/${total || 1}`;
+  const bar = document.createElement('div');
+  bar.className = 'progress-bar';
+  const fill = document.createElement('div');
+  fill.className = 'progress-bar-fill';
+  fill.style.width = total ? `${((currentIndex + 1) / total) * 100}%` : '0%';
+  bar.appendChild(fill);
+  progress.append(label, bar);
+
+  const prompt = document.createElement('h3');
+  prompt.textContent = question.label;
+
+  const fieldWrapper = document.createElement('div');
+  fieldWrapper.className = 'question-field';
+
+  const currentValue = answers[question.id] || '';
+  if (question.type === 'select') {
+    const select = document.createElement('select');
+    select.className = 'question-select';
+    const placeholderOption = document.createElement('option');
+    placeholderOption.value = '';
+    placeholderOption.textContent = question.placeholder || 'Select';
+    select.appendChild(placeholderOption);
+    question.options.forEach((option) => {
+      const opt = document.createElement('option');
+      opt.value = option;
+      opt.textContent = option;
+      select.appendChild(opt);
+    });
+    select.value = currentValue;
+    select.addEventListener('change', (event) => {
+      onAnswer(question.id, event.target.value);
+    });
+    fieldWrapper.appendChild(select);
+  } else if (question.type === 'radio') {
+    const list = document.createElement('div');
+    list.className = 'option-list';
+    question.options.forEach((option) => {
+      const optionId = `${question.id}-${option.value}`;
+      const label = document.createElement('label');
+      label.className = 'option-card';
+      const input = document.createElement('input');
+      input.type = 'radio';
+      input.name = question.id;
+      input.id = optionId;
+      input.value = option.value;
+      input.checked = currentValue === option.value;
+      input.addEventListener('change', () => {
+        onAnswer(question.id, option.value);
+      });
+
+      const title = document.createElement('span');
+      title.textContent = option.label;
+
+      label.append(input, title);
+      list.appendChild(label);
+    });
+    fieldWrapper.appendChild(list);
+  }
+
+  const actions = document.createElement('div');
+  actions.className = 'question-actions';
+
+  const prevButton = document.createElement('button');
+  prevButton.type = 'button';
+  prevButton.className = 'btn btn-secondary';
+  prevButton.textContent = 'Previous';
+  const shouldDisablePrev = typeof disablePrev === 'boolean' ? disablePrev : currentIndex === 0;
+  prevButton.disabled = shouldDisablePrev;
+  prevButton.addEventListener('click', () => {
+    if (currentIndex === 0) return;
+    onPrev();
+  });
+
+  const nextButton = document.createElement('button');
+  nextButton.type = 'button';
+  nextButton.className = 'btn btn-primary';
+  nextButton.textContent = nextLabel || (currentIndex === total - 1 ? 'Continue' : 'Continue');
+  nextButton.disabled = !answers[question.id];
+  nextButton.addEventListener('click', () => {
+    if (!answers[question.id]) return;
+    onNext();
+  });
+
+  actions.append(prevButton, nextButton);
+  card.append(progress, prompt, fieldWrapper, actions);
+  return card;
+}
+
+function buildStickyCta({ copy, primaryLabel, secondaryLabel, onPrimary, onSecondary }) {
+  const cta = document.createElement('div');
+  cta.className = 'cta-sticky';
+
+  const text = document.createElement('p');
+  text.textContent = copy;
+
+  const actions = document.createElement('div');
+  actions.className = 'question-actions';
+
+  const prevButton = document.createElement('button');
+  prevButton.type = 'button';
+  prevButton.className = 'btn btn-secondary';
+  prevButton.textContent = secondaryLabel;
+  prevButton.addEventListener('click', onSecondary);
+
+  const primaryButton = document.createElement('button');
+  primaryButton.type = 'button';
+  primaryButton.className = 'btn btn-primary';
+  primaryButton.textContent = primaryLabel;
+  primaryButton.addEventListener('click', onPrimary);
+
+  actions.append(prevButton, primaryButton);
+  cta.append(text, actions);
+  return cta;
+}
+
+function buildEligibilitySection(flowContent, state, rerender, isSummary) {
+  const section = document.createElement('section');
+  section.className = 'eligibility-flow-section';
+  section.appendChild(buildSectionHeader(flowContent.eligibilityCheck.title, flowContent.eligibilityCheck.description));
+
+  const visaResult = computeVisaResult(state.visaAnswers);
+  const visaBadge = document.createElement('div');
+  visaBadge.className = 'visa-match-pill';
+  visaBadge.textContent = visaResult.title;
+  section.appendChild(visaBadge);
+
+  if (!isSummary) {
+    const eligibilityQuestions = flowContent.eligibilityCheck.questions;
+    if (state.eligibilityIndex >= eligibilityQuestions.length) {
+      state.eligibilityIndex = eligibilityQuestions.length - 1;
+    }
+    section.appendChild(
+      buildQuestionCard({
+        question: eligibilityQuestions[state.eligibilityIndex],
+        currentIndex: state.eligibilityIndex,
+        total: eligibilityQuestions.length,
+        answers: state.eligibilityAnswers,
+        nextLabel: state.eligibilityIndex === eligibilityQuestions.length - 1 ? 'See summary' : 'Continue',
+        disablePrev: false,
+        onAnswer: (id, value) => {
+          state.eligibilityAnswers[id] = value;
+          rerender();
+        },
+        onPrev: () => {
+          if (state.eligibilityIndex > 0) {
+            state.eligibilityIndex -= 1;
+            rerender();
+          } else {
+            state.stage = 'visa-result';
+            rerender();
+          }
+        },
+        onNext: () => {
+          const question = eligibilityQuestions[state.eligibilityIndex];
+          if (!state.eligibilityAnswers[question.id]) return;
+          if (state.eligibilityIndex < eligibilityQuestions.length - 1) {
+            state.eligibilityIndex += 1;
+            rerender();
+          } else {
+            state.stage = 'summary';
+            rerender();
+          }
+        }
+      })
+    );
+  } else {
+    section.appendChild(buildSummaryCard(flowContent, state, rerender));
+  }
+
+  return section;
+}
+
+function buildSummaryCard(flowContent, state, rerender) {
+  const card = document.createElement('div');
+  card.className = 'summary-card';
+
+  const title = document.createElement('h3');
+  title.textContent = flowContent.summary.title;
+  const description = document.createElement('p');
+  description.textContent = flowContent.summary.description;
+
+  const highlights = document.createElement('ul');
+  highlights.className = 'summary-list';
+  const visaResult = computeVisaResult(state.visaAnswers);
+  visaResult.highlights.forEach((item) => {
+    const li = document.createElement('li');
+    li.textContent = item;
+    highlights.appendChild(li);
+  });
+
+  const checklist = document.createElement('div');
+  checklist.className = 'checklist';
+  flowContent.eligibilityCheck.checklist.forEach((item) => {
+    const row = document.createElement('p');
+    row.textContent = `• ${item}`;
+    checklist.appendChild(row);
+  });
+
+  const form = document.createElement('form');
+  form.className = 'email-form';
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    if (!validateEmail(state.email)) {
+      state.emailStatus = 'error';
+      rerender();
+      return;
+    }
+    state.emailStatus = 'sent';
+    rerender();
+  });
+
+  const label = document.createElement('label');
+  label.textContent = flowContent.summary.emailLabel;
+
+  const input = document.createElement('input');
+  input.type = 'email';
+  input.placeholder = flowContent.summary.emailPlaceholder;
+  input.value = state.email;
+  if (state.emailStatus === 'error') {
+    input.classList.add('input-error');
+  }
+  input.addEventListener('input', (event) => {
+    state.email = event.target.value;
+    if (state.emailStatus !== 'idle') {
+      state.emailStatus = 'idle';
+    }
+    rerender();
+  });
+
+  const submit = document.createElement('button');
+  submit.type = 'submit';
+  submit.className = 'btn btn-primary';
+  submit.textContent = flowContent.summary.submitLabel;
+
+  const confirmation = document.createElement('p');
+  confirmation.className = 'form-confirmation';
+  if (state.emailStatus === 'sent') {
+    confirmation.textContent = flowContent.summary.confirmation;
+  } else if (state.emailStatus === 'error') {
+    confirmation.textContent = 'Enter a valid email.';
+  }
+
+  const disclaimer = document.createElement('p');
+  disclaimer.className = 'form-disclaimer';
+  disclaimer.textContent = flowContent.summary.disclaimer;
+
+  form.append(label, input, submit);
+  card.append(title, description, highlights, checklist, form);
+  if (confirmation.textContent) {
+    card.appendChild(confirmation);
+  }
+  card.appendChild(disclaimer);
+
+  const actions = document.createElement('div');
+  actions.className = 'question-actions';
+  const prev = document.createElement('button');
+  prev.type = 'button';
+  prev.className = 'btn btn-secondary';
+  prev.textContent = 'Previous';
+  prev.addEventListener('click', () => {
+    state.stage = 'eligibility';
+    state.eligibilityIndex = flowContent.eligibilityCheck.questions.length - 1;
+    rerender();
+  });
+  actions.appendChild(prev);
+  card.appendChild(actions);
+
+  return card;
+}
+
+function getVisaQuestions(questions, answers) {
+  const intent = answers.intent;
+  return questions.filter((question) => {
+    if (question.id === 'situation') {
+      return intent === 'study' || intent === 'work';
+    }
+    return true;
+  });
+}
+
+function computeVisaResult(answers) {
+  const intent = answers.intent || 'visit';
+  const location = answers.location || 'outside';
+  let visaName = 'Visitor visa';
+  if (intent === 'study') {
+    visaName = 'Canada Study Permit';
+  } else if (intent === 'work') {
+    visaName = 'Canada Work Permit';
+  }
+  const locationText = location === 'inside' ? 'from inside Canada' : 'from outside Canada';
+  const title = `${visaName} ${locationText}`;
+  const highlights = [];
+  if (answers.nationality) highlights.push(`Passport nationality: ${answers.nationality}`);
+  if (intent) {
+    const intentLabels = {
+      study: 'Goal: Study in Canada',
+      work: 'Goal: Work in Canada',
+      visit: 'Goal: Visit / tourism'
+    };
+    highlights.push(intentLabels[intent] || '');
+  }
+  if (answers.situation) {
+    const situationLabels = {
+      'first-permit': 'First permit application',
+      'has-permit': 'Already holds a permit',
+      extending: 'Extending an existing permit'
+    };
+    highlights.push(situationLabels[answers.situation] || '');
+  }
+  const summary = 'These recommendations reflect recent IRCC guidance. Use them as a starting point before reviewing the official checklist.';
+  return { title, summary, highlights: highlights.filter(Boolean) };
+}
+
+function validateEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
