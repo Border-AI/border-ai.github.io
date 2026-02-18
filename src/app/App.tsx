@@ -73,14 +73,14 @@ const USER_ACCOUNTS: Record<string, { password: string; userData: UserData }> = 
 
 function getInitialScreen(): Screen {
   if (typeof window === 'undefined') {
-    return 'onboarding';
+    return 'login';
   }
   const params = new URLSearchParams(window.location.search);
   const screen = params.get('screen');
-  if (screen === 'login' || screen === 'signup') {
+  if (screen === 'login' || screen === 'signup' || screen === 'onboarding') {
     return screen;
   }
-  return 'onboarding';
+  return 'login';
 }
 
 export default function App() {
@@ -230,7 +230,7 @@ export default function App() {
     setSetupComplete(false);
     setUserData(null);
     setIsDemoUser(false);
-    setCurrentScreen('onboarding');
+    setCurrentScreen('login');
     setNavigationHistory([]);
   };
 
