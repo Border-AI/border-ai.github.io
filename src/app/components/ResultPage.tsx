@@ -2,54 +2,19 @@ import React from 'react';
 import { Button } from './ui/button';
 import { Logo } from './Logo';
 import { CheckCircle2, AlertCircle, Info, RotateCcw } from 'lucide-react';
-import { QuestionnaireData } from './SetupQuestionnaire';
 
 interface ResultPageProps {
-  data: QuestionnaireData;
+  data: {
+    visaType: string;
+    approvalChance: number;
+    hasStoredResult?: boolean;
+  };
   onContinue: () => void;
   onReset: () => void;
 }
 
 export function ResultPage({ data, onContinue, onReset }: ResultPageProps) {
-  // Calculate approval chance based on answers
-  const calculateApprovalChance = (): number => {
-    let score = 50; // Base score
-
-    // Study Permit scoring
-    if (data.visaType === 'Canada Study Permit and Visa') {
-      if (data.hasLOA === 'Yes, I have a valid LOA') score += 15;
-      if (data.hasPAL === 'Yes, I have a PAL') score += 10;
-      if (data.travelHistory?.includes('Yes')) score += 5;
-      if (data.refusals === 'No, never refused') score += 10;
-      if (data.studyPlanFit?.includes('clearly matches')) score += 10;
-      if (data.proofOfFunds?.includes('Yes')) score += 15;
-      if (data.fundsConsistency?.includes('Yes')) score += 10;
-      if (data.applyFrom === 'From inside Canada') score += 5;
-    }
-
-    // Work Permit scoring
-    if (data.visaType === 'Canada Work Permit and Visa') {
-      if (data.jobOfferStatus === 'Yes, I have a job offer') score += 20;
-      if (data.lmiaStatus === 'Yes, employer has LMIA') score += 15;
-      if (data.workExperience?.includes('5+ years')) score += 10;
-      if (data.travelHistory?.includes('Yes')) score += 5;
-      if (data.refusals === 'No, never refused') score += 10;
-      if (data.applyFrom === 'From inside Canada') score += 5;
-    }
-
-    // Visitor Visa scoring
-    if (data.visaType === 'Canada Visitor Visa') {
-      if (data.travelHistory?.includes('Yes')) score += 15;
-      if (data.refusals === 'No, never refused') score += 15;
-      if (data.tiesToHome?.includes('Strong')) score += 15;
-      if (data.proofOfFunds?.includes('Yes')) score += 10;
-      if (data.stayDuration?.includes('less than 2 weeks') || data.stayDuration?.includes('2-4 weeks')) score += 5;
-    }
-
-    return Math.min(Math.max(score, 0), 100);
-  };
-
-  const approvalChance = calculateApprovalChance();
+  const approvalChance = Math.max(0, Math.min(100, Math.round(data.approvalChance)));
 
   const getApprovalLevel = () => {
     if (approvalChance >= 80) return { label: 'High', color: 'text-green-600', bgColor: 'bg-green-50', borderColor: 'border-green-200' };
@@ -59,60 +24,6 @@ export function ResultPage({ data, onContinue, onReset }: ResultPageProps) {
   };
 
   const level = getApprovalLevel();
-
-  const getKeyRecommendations = () => {
-    const recommendations = [];
-
-    if (data.visaType === 'Canada Study Permit and Visa') {
-      if (data.hasLOA !== 'Yes, I have a valid LOA') {
-        recommendations.push('Obtain a valid Letter of Acceptance from a Designated Learning Institution (DLI)');
-      }
-      if (data.hasPAL !== 'Yes, I have a PAL') {
-        recommendations.push('Secure a Provincial Attestation Letter (PAL) from your province');
-      }
-      if (!data.proofOfFunds?.includes('Yes')) {
-        recommendations.push('Ensure you have sufficient proof of funds to cover tuition, living expenses, and travel');
-      }
-      if (!data.fundsConsistency?.includes('Yes')) {
-        recommendations.push('Prepare explanation documents for any inconsistencies in your bank statements');
-      }
-      if (!data.studyPlanFit?.includes('clearly matches')) {
-        recommendations.push('Prepare a strong Statement of Purpose explaining your study plan and career goals');
-      }
-    }
-
-    if (data.visaType === 'Canada Work Permit and Visa') {
-      if (data.jobOfferStatus !== 'Yes, I have a job offer') {
-        recommendations.push('Secure a valid job offer from a Canadian employer');
-      }
-      if (data.lmiaStatus !== 'Yes, employer has LMIA') {
-        recommendations.push('Ensure your employer obtains a Labour Market Impact Assessment (LMIA)');
-      }
-      if (!data.workExperience?.includes('years')) {
-        recommendations.push('Document your work experience thoroughly with reference letters');
-      }
-    }
-
-    if (data.visaType === 'Canada Visitor Visa') {
-      if (!data.travelHistory?.includes('Yes')) {
-        recommendations.push('Previous travel to visa-required countries strengthens your application');
-      }
-      if (!data.tiesToHome?.includes('Strong')) {
-        recommendations.push('Strengthen documentation of ties to your home country (employment, property, family)');
-      }
-      if (!data.proofOfFunds?.includes('Yes')) {
-        recommendations.push('Ensure adequate proof of funds for your stay in Canada');
-      }
-    }
-
-    if (data.refusals !== 'No, never refused') {
-      recommendations.push('Address previous refusals with detailed explanations and improved documentation');
-    }
-
-    return recommendations;
-  };
-
-  const recommendations = getKeyRecommendations();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-white flex flex-col">
@@ -127,9 +38,9 @@ export function ResultPage({ data, onContinue, onReset }: ResultPageProps) {
           <div className="bg-white rounded-lg shadow-lg p-8 md:p-12">
             {/* Title */}
             <div className="text-center mb-8">
-              <h1 className="text-3xl font-semibold text-gray-900 mb-2">Your Application Assessment</h1>
+              <h1 className="text-3xl font-semibold text-gray-900 mb-2">Eligibility check result</h1>
               <p className="text-gray-600">
-                Based on your answers, here's your personalized result
+                This page shows your eligibility check result based on your completed questionnaire.
               </p>
             </div>
 
@@ -137,7 +48,7 @@ export function ResultPage({ data, onContinue, onReset }: ResultPageProps) {
             <div className="mb-8 p-6 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg border border-orange-200">
               <div className="flex items-center gap-3 mb-2">
                 <Info className="w-5 h-5 text-[#E9692C]" />
-                <h2 className="text-lg font-semibold text-gray-900">Visa Type</h2>
+                <h2 className="text-lg font-semibold text-gray-900">User Visa type</h2>
               </div>
               <p className="text-xl font-medium text-[#E9692C]">{data.visaType}</p>
             </div>
@@ -150,7 +61,7 @@ export function ResultPage({ data, onContinue, onReset }: ResultPageProps) {
                 ) : (
                   <AlertCircle className={`w-6 h-6 ${level.color}`} />
                 )}
-                <h2 className="text-lg font-semibold text-gray-900">Estimated Approval Chance</h2>
+                <h2 className="text-lg font-semibold text-gray-900">User Approval chance rate</h2>
               </div>
               <div className="flex items-end gap-4 mb-4">
                 <div className="text-5xl font-bold text-gray-900">{approvalChance}%</div>
@@ -169,18 +80,11 @@ export function ResultPage({ data, onContinue, onReset }: ResultPageProps) {
               </div>
             </div>
 
-            {/* Key Recommendations */}
-            {recommendations.length > 0 && (
-              <div className="mb-8 p-6 bg-blue-50 rounded-lg border border-blue-200">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Key Recommendations</h2>
-                <ul className="space-y-3">
-                  {recommendations.map((rec, idx) => (
-                    <li key={idx} className="flex items-start gap-3">
-                      <div className="w-1.5 h-1.5 rounded-full bg-blue-600 mt-2 flex-shrink-0"></div>
-                      <span className="text-sm text-gray-700">{rec}</span>
-                    </li>
-                  ))}
-                </ul>
+            {!data.hasStoredResult && (
+              <div className="mb-8 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <p className="text-sm text-amber-800">
+                  We could not find a saved eligibility result from your pre-signup flow. Click reset and repeat to start from the first question.
+                </p>
               </div>
             )}
 
@@ -207,7 +111,7 @@ export function ResultPage({ data, onContinue, onReset }: ResultPageProps) {
                 onClick={onContinue}
                 className="flex-1 bg-[#E9692C] hover:bg-[#d15a24] text-lg py-6"
               >
-                Continue to Dashboard
+                Continue
               </Button>
             </div>
           </div>
