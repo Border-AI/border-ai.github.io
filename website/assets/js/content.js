@@ -207,7 +207,7 @@ window.siteContent = {
       label: "Border AI",
       href: "/",
       logo: {
-        src: "/border-ai-logo.svg",
+        src: "/website/border-ai-logo.svg",
         alt: "Border AI logo"
       }
     },

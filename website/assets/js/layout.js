@@ -1,8 +1,8 @@
 /*
 README
-- Edit every piece of copy (hero text, pricing, links, nav labels, etc.) in /assets/js/content.js.
-- Adjust site-wide tokens (colors, fonts, spacing, shadows) inside /assets/css/theme.css.
-- Add or replace media by dropping files in /assets/media/ and referencing them with relative paths (e.g., <img src="/assets/media/hero.jpg" alt="...">) inside the relevant HTML or JS renderers.
+- Edit every piece of copy (hero text, pricing, links, nav labels, etc.) in /website/assets/js/content.js.
+- Adjust site-wide tokens (colors, fonts, spacing, shadows) inside /website/assets/css/theme.css.
+- Add or replace media by dropping files in /website/assets/media/ and referencing them with relative paths (e.g., <img src="/website/assets/media/hero.jpg" alt="...">) inside the relevant HTML or JS renderers.
 */
 
 const smoothHandled = new WeakSet();

@@ -2,14 +2,14 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { resolve } from "path";
-import { copyFileSync, mkdirSync } from "fs";
+import { copyFileSync, cpSync, existsSync, mkdirSync, rmSync } from "fs";
 
 export default defineConfig({
-  root: resolve(__dirname, "app-shell"),
+  root: resolve(__dirname, "app/source/app-shell"),
   base: "/app/",
   publicDir: resolve(__dirname, "public"),
   build: {
-    outDir: resolve(__dirname, "app"),
+    outDir: resolve(__dirname, "app/.build"),
     emptyOutDir: true,
   },
   plugins: [
@@ -18,15 +18,27 @@ export default defineConfig({
     {
       name: "app-route-pages",
       closeBundle() {
-        const outDir = resolve(__dirname, "app");
-        const rootIndex = resolve(outDir, "index.html");
+        const appDir = resolve(__dirname, "app");
+        const buildDir = resolve(__dirname, "app/.build");
+        const rootIndex = resolve(buildDir, "index.html");
+        const buildAssetsDir = resolve(buildDir, "assets");
+        const appAssetsDir = resolve(appDir, "assets");
         const routes = ["signup", "login", "eligibilitycheck", "dashboard"];
 
+        if (existsSync(appAssetsDir)) {
+          rmSync(appAssetsDir, { recursive: true, force: true });
+        }
+
+        cpSync(buildAssetsDir, appAssetsDir, { recursive: true });
+        copyFileSync(rootIndex, resolve(appDir, "index.html"));
+
         routes.forEach((route) => {
-          const routeDir = resolve(outDir, route);
+          const routeDir = resolve(appDir, route);
           mkdirSync(routeDir, { recursive: true });
-          copyFileSync(rootIndex, resolve(routeDir, "index.html"));
+          copyFileSync(resolve(appDir, "index.html"), resolve(routeDir, "index.html"));
         });
+
+        rmSync(buildDir, { recursive: true, force: true });
       },
     },
   ],

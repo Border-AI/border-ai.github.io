@@ -1,11 +1,16 @@
 
-  # Visa Application Assistant Prototype
+# Border AI Repository
 
-  This is a code bundle for Visa Application Assistant Prototype. The original project is available at https://www.figma.com/design/r1892ySDUk6PYd0UFMbSlD/Visa-Application-Assistant-Prototype.
+## Project structure
 
-  ## Running the code
+- `website/`: marketing website source (theme, copy, layout, eligibility flow UI).
+- `app/`: app deployment output and app source.
+- `app/source/src/`: React app source code.
+- `app/source/app-shell/`: Vite HTML shell for the app.
+- `index.html` and `eligibility-check/index.html`: root URL entrypoints that load website assets from `website/`.
 
-  Run `npm i` to install the dependencies.
+## Running the app build
 
-  Run `npm run dev` to start the development server.
+- `npm i`
+- `npm run build`
   
