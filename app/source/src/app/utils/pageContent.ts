@@ -31,11 +31,35 @@ export interface DashboardPageCopy {
   applyGuideTabLabel?: string;
 }
 
+export interface PlanEntryPageCopy {
+  heading?: string;
+  backButtonLabel?: string;
+  trialTitle?: string;
+  trialDescription?: string;
+  trialNote?: string;
+  startTrialLabel?: string;
+  basicButtonLabel?: string;
+  proButtonLabel?: string;
+}
+
+export interface PaymentPageCopy {
+  headerTitle?: string;
+  backButtonLabel?: string;
+  supportEmail?: string;
+  basicFeatures?: string[];
+  proFeatures?: string[];
+  termsBullets?: string[];
+  secondaryButtonLabel?: string;
+  secondaryNote?: string;
+}
+
 export interface AppPageCopy {
   signup?: SignUpPageCopy;
   login?: LoginPageCopy;
   eligibility?: EligibilityPageCopy;
   dashboard?: DashboardPageCopy;
+  planEntry?: PlanEntryPageCopy;
+  payment?: PaymentPageCopy;
 }
 
 const PAGE_CONTENT_SCRIPT_ID = 'app-page-content';

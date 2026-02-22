@@ -76,15 +76,6 @@ function buildNav(navContent, navLinks) {
     navLinks.push(link);
   });
 
-  const cta = document.createElement('a');
-  cta.className = 'btn btn-primary';
-  cta.href = navContent.cta.href;
-  cta.textContent = navContent.cta.label;
-  cta.dataset.nav = 'cta';
-  navLinks.push(cta);
-
- 
-  inner.appendChild(cta);
   inner.appendChild(linksWrapper);
   nav.appendChild(inner);
   return nav;

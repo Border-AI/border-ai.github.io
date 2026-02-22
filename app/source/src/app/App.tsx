@@ -6,13 +6,15 @@ import { EligibilityPanelData, EligibilitySummaryItem } from './components/Eligi
 import { SettingsScreen } from './components/SettingsScreen';
 import { HelpScreen } from './components/HelpScreen';
 import { PlansScreen } from './components/PlansScreen';
+import { PlanEntryPage } from './components/PlanEntryPage';
+import { PaymentPage } from './components/PaymentPage';
 import { AccountScreen } from './components/AccountScreen';
 import { BackButton } from './components/BackButton';
 import { TopNav } from './components/TopNav';
 import { DEMO_USER } from './utils/constants';
 import { AppPageCopy, fetchAppPageCopy, readInitialAppPageCopy } from './utils/pageContent';
 
-export type Screen = 'signup' | 'login' | 'eligibilitycheck' | 'workspace' | 'settings' | 'plans' | 'account' | 'help';
+export type Screen = 'signup' | 'login' | 'plan' | 'payment' | 'eligibilitycheck' | 'workspace' | 'settings' | 'plans' | 'account' | 'help';
 
 export interface IntakeData {
   goal: string;
@@ -54,6 +56,8 @@ const DEFAULT_ELIGIBILITY_RESULT: EligibilityResultData = {
 const SCREEN_PATHS: Record<Screen, string> = {
   signup: '/app/signup',
   login: '/app/login',
+  plan: '/app/plan/',
+  payment: '/app/payment/',
   eligibilitycheck: '/app/eligibilitycheck',
   workspace: '/app/dashboard',
   settings: '/app/dashboard',
@@ -92,10 +96,14 @@ function normalizePath(pathname: string): string {
 function screenFromPath(pathname: string): Screen {
   const path = normalizePath(pathname);
   if (path === '/app/login') return 'login';
+  if (path === '/app/plan') return 'plan';
+  if (path === '/app/payment') return 'payment';
   if (path === '/app/eligibilitycheck') return 'eligibilitycheck';
   if (path === '/app/dashboard') return 'workspace';
   return 'signup';
 }
+
+const SUBSCRIPTION_STORAGE_KEY = 'border_ai_subscription';
 
 function pushPathForScreen(screen: Screen, replace = false) {
   if (typeof window === 'undefined') return;
@@ -155,6 +163,10 @@ export default function App() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [eligibilityResult, setEligibilityResult] = useState<EligibilityResultData | null>(() => readStoredEligibilityResult());
   const [pageCopy, setPageCopy] = useState<AppPageCopy>(() => readInitialAppPageCopy());
+  const [paymentSelectedPlan, setPaymentSelectedPlan] = useState<'basic' | 'pro'>(() => {
+    if (typeof window === 'undefined') return 'basic';
+    return new URLSearchParams(window.location.search).get('plan') === 'pro' ? 'pro' : 'basic';
+  });
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -182,7 +194,13 @@ export default function App() {
   }, [currentScreen]);
 
   useEffect(() => {
-    if (!isAuthenticated && currentScreen !== 'signup' && currentScreen !== 'login') {
+    if (
+      !isAuthenticated &&
+      currentScreen !== 'signup' &&
+      currentScreen !== 'login' &&
+      currentScreen !== 'plan' &&
+      currentScreen !== 'payment'
+    ) {
       setCurrentScreen('signup');
       pushPathForScreen('signup', true);
     }
@@ -273,6 +291,73 @@ export default function App() {
     }
   };
 
+  const ensureSignedInSession = () => {
+    if (isAuthenticated) return;
+    setIsAuthenticated(true);
+    setIsDemoUser(true);
+    setUserData({
+      fullName: DEMO_USER.fullName,
+      email: DEMO_USER.email,
+      initials: DEMO_USER.avatarInitials,
+      profileStage1Complete: true
+    });
+  };
+
+  const handleStartTrial = () => {
+    ensureSignedInSession();
+    setEligibilityResult(readStoredEligibilityResult());
+    navigateWithHistory('eligibilitycheck', { trackHistory: false, replace: true });
+  };
+
+  const handleGetBasic = () => {
+    ensureSignedInSession();
+    setPaymentSelectedPlan('basic');
+    navigateWithHistory('payment', { trackHistory: false, replace: true });
+  };
+
+  const handleGetPro = () => {
+    ensureSignedInSession();
+    setPaymentSelectedPlan('pro');
+    navigateWithHistory('payment', { trackHistory: false, replace: true });
+  };
+
+  const handlePlanBack = () => {
+    window.location.href = '/eligibility-check/?resume=review';
+  };
+
+  const handleGoDashboardFromPayment = () => {
+    ensureSignedInSession();
+    window.history.pushState({}, '', '/app/dashboard?from=payment&next=eligibility-result');
+    setCurrentScreen('workspace');
+  };
+
+  const handleBackFromPayment = () => {
+    navigateWithHistory('plan', { trackHistory: false, replace: true });
+  };
+
+  const handlePaymentSuccess = (plan: 'basic' | 'pro', method: 'card' | 'paypal' | 'bank') => {
+    ensureSignedInSession();
+    if (typeof window !== 'undefined') {
+      try {
+        window.localStorage.setItem(
+          SUBSCRIPTION_STORAGE_KEY,
+          JSON.stringify({
+            product: 'Border AI',
+            plan,
+            amount: plan === 'basic' ? 19 : 99,
+            interval: 'case',
+            method,
+            subscribedAt: new Date().toISOString()
+          })
+        );
+      } catch {
+        // Ignore storage errors.
+      }
+    }
+    window.history.pushState({}, '', `/app/dashboard?subscribed=1&plan=${plan}`);
+    setCurrentScreen('workspace');
+  };
+
   const handleRepeatEligibility = () => {
     const params = new URLSearchParams({
       mode: 'eligibility-only',
@@ -311,6 +396,30 @@ export default function App() {
     setNavigationHistory([]);
     pushPathForScreen('login', true);
   };
+
+  if (currentScreen === 'plan') {
+    return (
+      <PlanEntryPage
+        copy={pageCopy.planEntry}
+        onBack={handlePlanBack}
+        onStartTrial={handleStartTrial}
+        onGetBasic={handleGetBasic}
+        onGetPro={handleGetPro}
+      />
+    );
+  }
+
+  if (currentScreen === 'payment') {
+    return (
+      <PaymentPage
+        copy={pageCopy.payment}
+        initialPlan={paymentSelectedPlan}
+        onBack={handleBackFromPayment}
+        onGoDashboard={handleGoDashboardFromPayment}
+        onPaymentSuccess={handlePaymentSuccess}
+      />
+    );
+  }
 
   if (!isAuthenticated) {
     if (currentScreen === 'login') {
@@ -352,11 +461,12 @@ export default function App() {
       email: 'dan.fisher@example.com',
       initials: 'DF'
     };
+    const dashboardNext = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('next') : null;
     return (
       <WorkspaceDashboard
         userName={userInfo.fullName}
         userInitials={userInfo.initials}
-        initialTab={currentScreen === 'eligibilitycheck' ? 'eligibility-check' : 'home'}
+        initialTab={currentScreen === 'eligibilitycheck' || dashboardNext === 'eligibility-result' ? 'eligibility-check' : 'home'}
         eligibilityData={eligibilityPanelData}
         eligibilityCopy={pageCopy.eligibility}
         dashboardCopy={pageCopy.dashboard}

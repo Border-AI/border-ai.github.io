@@ -1,5 +1,6 @@
 import React from 'react';
-const logoImage = "/border-ai-logo.svg";
+const logoImage = "/app/border-ai-logo.svg";
+const fallbackLogoImage = "/border-ai-logo.svg";
 
 
 interface LogoProps {
@@ -8,11 +9,16 @@ interface LogoProps {
 
 export function Logo({ className = "h-8" }: LogoProps) {
   return (
-    <div className={`flex items-center ${className}`}>
+    <div className="flex items-center">
       <img
         src={logoImage}
         alt="Border AI Logo"
-        className="h-8 w-auto object-contain"
+        className={`${className} w-auto object-contain`}
+        onError={(event) => {
+          const target = event.currentTarget;
+          if (target.src.includes(fallbackLogoImage)) return;
+          target.src = fallbackLogoImage;
+        }}
       />
     </div>
   );

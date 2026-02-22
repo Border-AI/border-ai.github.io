@@ -275,6 +275,7 @@ function getSiteContent() {
 }
 
 const ELIGIBILITY_RESULT_STORAGE_KEY = 'border_ai_eligibility_result';
+const ELIGIBILITY_DRAFT_STORAGE_KEY = 'border_ai_eligibility_draft';
 const ELIGIBILITY_ONLY_MODE = 'eligibility-only';
 
 function normalizeFlowBranch(value) {
@@ -299,15 +300,53 @@ function readStoredEligibilityResult() {
 
 function readFlowRuntimeConfig() {
   if (typeof window === 'undefined') {
-    return { mode: null, destination: null, branch: null };
+    return { mode: null, destination: null, branch: null, resume: null };
   }
 
   const params = new URLSearchParams(window.location.search);
   return {
     mode: params.get('mode'),
     destination: params.get('destination'),
-    branch: normalizeFlowBranch(params.get('branch'))
+    branch: normalizeFlowBranch(params.get('branch')),
+    resume: params.get('resume')
   };
+}
+
+function readStoredEligibilityDraft() {
+  if (typeof window === 'undefined') return null;
+  const raw = window.localStorage.getItem(ELIGIBILITY_DRAFT_STORAGE_KEY);
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    return {
+      visaAnswers: parsed.visaAnswers && typeof parsed.visaAnswers === 'object' ? parsed.visaAnswers : {},
+      eligibilityAnswers: parsed.eligibilityAnswers && typeof parsed.eligibilityAnswers === 'object' ? parsed.eligibilityAnswers : {},
+      visaBranch: normalizeFlowBranch(parsed.visaBranch),
+      eligibilityBranch: normalizeFlowBranch(parsed.eligibilityBranch)
+    };
+  } catch {
+    return null;
+  }
+}
+
+function persistEligibilityDraft(state) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(
+      ELIGIBILITY_DRAFT_STORAGE_KEY,
+      JSON.stringify({
+        visaAnswers: state.visaAnswers || {},
+        eligibilityAnswers: state.eligibilityAnswers || {},
+        visaBranch: state.visaBranch || null,
+        eligibilityBranch: state.eligibilityBranch || null,
+        createdAt: new Date().toISOString()
+      })
+    );
+  } catch {
+    // Ignore storage errors.
+  }
 }
 
 function createHighlightIcon(type) {
@@ -369,17 +408,25 @@ function initEligibilityFlow(flowContent) {
   if (!target || !flowContent) return;
   const runtime = readFlowRuntimeConfig();
   const storedResult = readStoredEligibilityResult();
+  const storedDraft = runtime.resume === 'review' ? readStoredEligibilityDraft() : null;
   const defaultBranch = runtime.branch || storedResult?.branch || 'visit';
   const isEligibilityOnlyMode = runtime.mode === ELIGIBILITY_ONLY_MODE;
+  const hasReviewDraft = Boolean(
+    storedDraft &&
+    storedDraft.visaAnswers &&
+    Object.keys(storedDraft.visaAnswers).length &&
+    storedDraft.eligibilityAnswers &&
+    Object.keys(storedDraft.eligibilityAnswers).length
+  );
 
   const state = {
-    stage: isEligibilityOnlyMode ? 'eligibility' : 'visa',
+    stage: isEligibilityOnlyMode ? 'eligibility' : hasReviewDraft ? 'review' : 'visa',
     visaIndex: 0,
     eligibilityIndex: 0,
-    visaAnswers: isEligibilityOnlyMode ? { intent: defaultBranch } : {},
-    eligibilityAnswers: {},
-    visaBranch: isEligibilityOnlyMode ? defaultBranch : null,
-    eligibilityBranch: isEligibilityOnlyMode ? defaultBranch : null,
+    visaAnswers: isEligibilityOnlyMode ? { intent: defaultBranch } : storedDraft?.visaAnswers || {},
+    eligibilityAnswers: storedDraft?.eligibilityAnswers || {},
+    visaBranch: isEligibilityOnlyMode ? defaultBranch : storedDraft?.visaBranch || null,
+    eligibilityBranch: isEligibilityOnlyMode ? defaultBranch : storedDraft?.eligibilityBranch || null,
     resultData: null,
     eligibilityOnlyMode: isEligibilityOnlyMode,
     postResultDestination: runtime.destination === 'app' ? 'app' : 'signup'
@@ -674,14 +721,17 @@ function buildReviewCard(flowContent, state, rerender) {
   card.className = 'review-card';
 
   const title = document.createElement('h3');
+  title.className = 'review-title';
   title.textContent = flowContent.review.title;
+
   const description = document.createElement('p');
+  description.className = 'review-footer-note';
   description.textContent = flowContent.review.description;
 
-  const visaSummary = buildAnswerSummary('Visa match answers', computeVisaSummary(flowContent.visaMatch, state.visaAnswers, state.visaBranch));
-  const eligibilitySummary = buildAnswerSummary('Eligibility answers', computeEligibilitySummary(flowContent, state));
+  const visaSummary = buildAnswerSummary('Visa match answers', computeVisaSummary(flowContent.visaMatch, state.visaAnswers, state.visaBranch), { numbered: true });
+  const eligibilitySummary = buildAnswerSummary('Eligibility answers', computeEligibilitySummary(flowContent, state), { numbered: true });
 
-  card.append(title, description, visaSummary, eligibilitySummary);
+  card.append(title, visaSummary, eligibilitySummary);
 
   const actions = document.createElement('div');
   actions.className = 'question-actions';
@@ -709,6 +759,7 @@ function buildReviewCard(flowContent, state, rerender) {
       ...buildSummaryEntries(eligibilityQuestions, state.eligibilityAnswers, state.eligibilityBranch)
     ];
     const risks = computeRiskFlags(eligibilityQuestions, state.eligibilityAnswers);
+    persistEligibilityDraft(state);
 
     persistEligibilityResult({
       ...result,
@@ -727,11 +778,11 @@ function buildReviewCard(flowContent, state, rerender) {
       return;
     }
 
-    window.location.href = '/app/signup';
+    window.location.href = '/app/plan/';
   });
 
   actions.append(editButton, seeResultButton);
-  card.appendChild(actions);
+  card.append(actions, description);
 
   return card;
 }

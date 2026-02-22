@@ -545,6 +545,26 @@
   width: 100%;
 }
 
+.review-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  min-height: 65vh;
+}
+
+.review-title {
+  margin: 0;
+  font-size: var(--font-size-xxl);
+  line-height: var(--line-height-snug);
+}
+
+.review-footer-note {
+  margin: 0;
+  margin-top: auto;
+  font-size: var(--font-size-base);
+  color: var(--color-muted);
+}
+
 .result-card,
 .summary-card {
   border: 1px solid var(--color-border);
