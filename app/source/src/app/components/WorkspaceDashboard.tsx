@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Card } from './ui/card';
@@ -6,8 +6,11 @@ import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { TopNav } from './TopNav';
 import { BorderAIAssistant } from './BorderAIAssistant';
+import { EligibilityCheckPanel, EligibilityPanelData } from './EligibilityCheckPanel';
+import { DashboardPageCopy, EligibilityPageCopy } from '../utils/pageContent';
 import {
   Home,
+  ClipboardCheck,
   FileText,
   BookOpen,
   ChevronRight,
@@ -35,7 +38,7 @@ import {
 } from 'lucide-react';
 import { cn } from './ui/utils';
 
-type WorkspaceTab = 'home' | 'documents' | 'apply-guide';
+export type WorkspaceTab = 'home' | 'eligibility-check' | 'documents' | 'apply-guide';
 type TaskStatus = 'todo' | 'in-progress' | 'waiting' | 'done';
 type OutputStatus = 'upload-needed' | 'generating' | 'generated' | 'uploaded';
 
@@ -72,6 +75,12 @@ interface Message {
 interface WorkspaceDashboardProps {
   userName?: string;
   userInitials?: string;
+  initialTab?: WorkspaceTab;
+  eligibilityData?: EligibilityPanelData;
+  eligibilityCopy?: EligibilityPageCopy;
+  dashboardCopy?: DashboardPageCopy;
+  onRepeatEligibility?: () => void;
+  onTabChange?: (tab: WorkspaceTab) => void;
   onNavigate?: (screen: string) => void;
   onLogout?: () => void;
 }
@@ -79,10 +88,16 @@ interface WorkspaceDashboardProps {
 export function WorkspaceDashboard({
   userName = 'Dan Fisher',
   userInitials = 'DF',
+  initialTab = 'home',
+  eligibilityData,
+  eligibilityCopy,
+  dashboardCopy,
+  onRepeatEligibility,
+  onTabChange,
   onNavigate,
   onLogout,
 }: WorkspaceDashboardProps = {}) {
-  const [activeTab, setActiveTab] = useState<WorkspaceTab>('home');
+  const [activeTab, setActiveTab] = useState<WorkspaceTab>(initialTab);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<string[]>([
     'Identity',
@@ -109,6 +124,14 @@ export function WorkspaceDashboard({
   const [isChatCollapsed, setIsChatCollapsed] = useState(false);
   const [chatStatus, setChatStatus] = useState<'idle' | 'analyzing' | 'saved'>('idle');
   const [isGenerating, setIsGenerating] = useState(false);
+  const homeTabLabel = dashboardCopy?.homeTabLabel || 'Home';
+  const eligibilityTabLabel = dashboardCopy?.eligibilityTabLabel || 'Eligibility check';
+  const documentsTabLabel = dashboardCopy?.documentsTabLabel || 'Documents';
+  const applyGuideTabLabel = dashboardCopy?.applyGuideTabLabel || 'Apply guide';
+
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
 
   const tasks: Task[] = [
     {
@@ -388,6 +411,13 @@ export function WorkspaceDashboard({
     }, 1000);
   };
 
+  const handleTabSelect = (tab: WorkspaceTab) => {
+    setActiveTab(tab);
+    if (onTabChange) {
+      onTabChange(tab);
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen bg-background">
       {/* Top Navigation */}
@@ -405,7 +435,7 @@ export function WorkspaceDashboard({
         <div className="w-56 border-r border-border bg-card flex flex-col">
           <nav className="flex-1 p-2">
             <button
-              onClick={() => setActiveTab('home')}
+              onClick={() => handleTabSelect('home')}
               className={cn(
                 'w-full flex items-center gap-3 px-3 py-2 rounded-md text-base transition-colors',
                 activeTab === 'home'
@@ -414,10 +444,22 @@ export function WorkspaceDashboard({
               )}
             >
               <Home className="h-5 w-5" />
-              Home
+              {homeTabLabel}
             </button>
             <button
-              onClick={() => setActiveTab('documents')}
+              onClick={() => handleTabSelect('eligibility-check')}
+              className={cn(
+                'w-full flex items-center gap-3 px-3 py-2 rounded-md text-base transition-colors',
+                activeTab === 'eligibility-check'
+                  ? 'bg-accent text-accent-foreground font-medium'
+                  : 'text-muted-foreground hover:bg-accent/50'
+              )}
+            >
+              <ClipboardCheck className="h-5 w-5" />
+              {eligibilityTabLabel}
+            </button>
+            <button
+              onClick={() => handleTabSelect('documents')}
               className={cn(
                 'w-full flex items-center gap-3 px-3 py-2 rounded-md text-base transition-colors',
                 activeTab === 'documents'
@@ -426,10 +468,10 @@ export function WorkspaceDashboard({
               )}
             >
               <FileText className="h-5 w-5" />
-              Documents
+              {documentsTabLabel}
             </button>
             <button
-              onClick={() => setActiveTab('apply-guide')}
+              onClick={() => handleTabSelect('apply-guide')}
               className={cn(
                 'w-full flex items-center gap-3 px-3 py-2 rounded-md text-base transition-colors',
                 activeTab === 'apply-guide'
@@ -438,13 +480,34 @@ export function WorkspaceDashboard({
               )}
             >
               <BookOpen className="h-5 w-5" />
-              Apply guide
+              {applyGuideTabLabel}
             </button>
           </nav>
         </div>
 
         {/* Center - Main Work Area */}
         <div className="flex-1 flex flex-col overflow-hidden">
+          {activeTab === 'eligibility-check' && (
+            <EligibilityCheckPanel
+              data={
+                eligibilityData || {
+                  visaLabel: 'Visitor visa',
+                  approval: 65,
+                  redFlags: [],
+                  yellowFlags: [],
+                  summary: [],
+                  hasStoredResult: false
+                }
+              }
+              copy={eligibilityCopy}
+              onRepeat={() => {
+                if (onRepeatEligibility) {
+                  onRepeatEligibility();
+                }
+              }}
+            />
+          )}
+
           {/* Home Tab - Checklist */}
           {activeTab === 'home' && (
             <>

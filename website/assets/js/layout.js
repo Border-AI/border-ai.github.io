@@ -1,6 +1,8 @@
 /*
 README
-- Edit every piece of copy (hero text, pricing, links, nav labels, etc.) in /website/assets/js/content.js.
+- Edit each page's content directly inside that page HTML in the inline `window.siteContent` block:
+  - `/index.html` and `/website/index.html` for Home
+  - `/eligibility-check/index.html` and `/website/eligibility-check/index.html` for Eligibility
 - Adjust site-wide tokens (colors, fonts, spacing, shadows) inside /website/assets/css/theme.css.
 - Add or replace media by dropping files in /website/assets/media/ and referencing them with relative paths (e.g., <img src="/website/assets/media/hero.jpg" alt="...">) inside the relevant HTML or JS renderers.
 */
@@ -8,8 +10,9 @@ README
 const smoothHandled = new WeakSet();
 
 (() => {
-  const content = window.siteContent;
+  const content = getSiteContent();
   if (!content) return;
+  window.siteContent = content;
 
   const navMount = document.querySelector('[data-mount="navbar"]');
   const footerMount = document.querySelector('[data-mount="footer"]');
@@ -33,6 +36,17 @@ const smoothHandled = new WeakSet();
     window.addEventListener('popstate', () => setActiveLinks(navLinks));
   }
 })();
+
+function getSiteContent() {
+  if (window.siteContent) return window.siteContent;
+  const script = document.getElementById('site-content');
+  if (!script || !script.textContent) return null;
+  try {
+    return JSON.parse(script.textContent);
+  } catch {
+    return null;
+  }
+}
 
 function buildNav(navContent, navLinks) {
   const nav = document.createElement('nav');

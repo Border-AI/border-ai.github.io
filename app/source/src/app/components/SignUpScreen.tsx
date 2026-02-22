@@ -8,13 +8,15 @@ import { Logo } from './Logo';
 import { Switch } from './ui/switch';
 import { validatePassword, DEMO_USER } from '../utils/constants';
 import { Check, X, CircleAlert, Sparkles } from 'lucide-react';
+import { SignUpPageCopy } from '../utils/pageContent';
 
 interface SignUpScreenProps {
   onSignUp: (isDemoUser?: boolean, signupData?: { fullName: string; email: string }) => void;
   onNavigateToLogin: () => void;
+  copy?: SignUpPageCopy;
 }
 
-export function SignUpScreen({ onSignUp, onNavigateToLogin }: SignUpScreenProps) {
+export function SignUpScreen({ onSignUp, onNavigateToLogin, copy }: SignUpScreenProps) {
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -109,6 +111,10 @@ export function SignUpScreen({ onSignUp, onNavigateToLogin }: SignUpScreenProps)
     { text: 'One number', met: /[0-9]/.test(formData.password) },
     { text: 'One symbol (!@#$%^&*, etc.)', met: /[!@#$%^&*(),.?":{}|<>]/.test(formData.password) },
   ];
+  const title = copy?.title || 'Create Your Account';
+  const submitButton = copy?.submitButton || 'Create Account';
+  const existingAccountLabel = copy?.existingAccountLabel || 'Already have an account?';
+  const loginLinkLabel = copy?.loginLinkLabel || 'Log in';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-50 flex items-center justify-center p-6">
@@ -117,7 +123,7 @@ export function SignUpScreen({ onSignUp, onNavigateToLogin }: SignUpScreenProps)
           <div className="flex justify-center mb-4">
             <Logo />
           </div>
-          <h1 className="mb-2">Create Your Account</h1>
+          <h1 className="mb-2">{title}</h1>
         </div>
 
         {/* Demo Mode Toggle */}
@@ -262,19 +268,19 @@ export function SignUpScreen({ onSignUp, onNavigateToLogin }: SignUpScreenProps)
             className="w-full" 
             disabled={!formData.agreedToTerms || !passwordValidation.isValid}
           >
-            Create Account
+            {submitButton}
           </Button>
         </form>
 
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-600">
-            Already have an account?{' '}
+            {existingAccountLabel}{' '}
             <button
               type="button"
               onClick={onNavigateToLogin}
               className="text-[#E9692C] hover:underline"
             >
-              Log in
+              {loginLinkLabel}
             </button>
           </p>
         </div>

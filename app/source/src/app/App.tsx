@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { SignUpScreen } from './components/SignUpScreen';
 import { LoginScreen } from './components/LoginScreen';
-import { ResultPage } from './components/ResultPage';
-import { WorkspaceDashboard } from './components/WorkspaceDashboard';
+import { WorkspaceDashboard, WorkspaceTab } from './components/WorkspaceDashboard';
+import { EligibilityPanelData, EligibilitySummaryItem } from './components/EligibilityCheckPanel';
 import { SettingsScreen } from './components/SettingsScreen';
 import { HelpScreen } from './components/HelpScreen';
 import { PlansScreen } from './components/PlansScreen';
@@ -10,8 +10,9 @@ import { AccountScreen } from './components/AccountScreen';
 import { BackButton } from './components/BackButton';
 import { TopNav } from './components/TopNav';
 import { DEMO_USER } from './utils/constants';
+import { AppPageCopy, fetchAppPageCopy, readInitialAppPageCopy } from './utils/pageContent';
 
-export type Screen = 'signup' | 'login' | 'result' | 'workspace' | 'settings' | 'plans' | 'account' | 'help';
+export type Screen = 'signup' | 'login' | 'eligibilitycheck' | 'workspace' | 'settings' | 'plans' | 'account' | 'help';
 
 export interface IntakeData {
   goal: string;
@@ -35,19 +36,25 @@ interface EligibilityResultData {
   visaLabel: string;
   approval: number;
   branch?: string;
+  redFlags: string[];
+  yellowFlags: string[];
+  summary: EligibilitySummaryItem[];
   createdAt?: string;
 }
 
 const ELIGIBILITY_RESULT_STORAGE_KEY = 'border_ai_eligibility_result';
 const DEFAULT_ELIGIBILITY_RESULT: EligibilityResultData = {
   visaLabel: 'Visitor visa',
-  approval: 65
+  approval: 65,
+  redFlags: [],
+  yellowFlags: [],
+  summary: []
 };
 
 const SCREEN_PATHS: Record<Screen, string> = {
   signup: '/app/signup',
   login: '/app/login',
-  result: '/app/eligibilitycheck',
+  eligibilitycheck: '/app/eligibilitycheck',
   workspace: '/app/dashboard',
   settings: '/app/dashboard',
   plans: '/app/dashboard',
@@ -85,7 +92,7 @@ function normalizePath(pathname: string): string {
 function screenFromPath(pathname: string): Screen {
   const path = normalizePath(pathname);
   if (path === '/app/login') return 'login';
-  if (path === '/app/eligibilitycheck') return 'result';
+  if (path === '/app/eligibilitycheck') return 'eligibilitycheck';
   if (path === '/app/dashboard') return 'workspace';
   return 'signup';
 }
@@ -110,9 +117,22 @@ function readStoredEligibilityResult(): EligibilityResultData | null {
     if (!parsed || typeof parsed.visaLabel !== 'string') return null;
     const approval = Number(parsed.approval);
     if (!Number.isFinite(approval)) return null;
+    const redFlags = Array.isArray(parsed.redFlags) ? parsed.redFlags.filter((item) => typeof item === 'string') : [];
+    const yellowFlags = Array.isArray(parsed.yellowFlags) ? parsed.yellowFlags.filter((item) => typeof item === 'string') : [];
+    const summary = Array.isArray(parsed.summary)
+      ? parsed.summary
+          .filter((entry) => entry && typeof entry.question === 'string')
+          .map((entry) => ({
+            question: String(entry.question),
+            answer: typeof entry.answer === 'string' ? entry.answer : 'Not answered'
+          }))
+      : [];
     return {
       ...parsed,
-      approval: Math.max(0, Math.min(100, Math.round(approval)))
+      approval: Math.max(0, Math.min(100, Math.round(approval))),
+      redFlags,
+      yellowFlags,
+      summary
     };
   } catch {
     return null;
@@ -134,6 +154,7 @@ export default function App() {
   const [isDemoUser, setIsDemoUser] = useState(false);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [eligibilityResult, setEligibilityResult] = useState<EligibilityResultData | null>(() => readStoredEligibilityResult());
+  const [pageCopy, setPageCopy] = useState<AppPageCopy>(() => readInitialAppPageCopy());
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -146,6 +167,19 @@ export default function App() {
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
+
+  useEffect(() => {
+    const path = SCREEN_PATHS[currentScreen];
+    if (!path || typeof window === 'undefined') return;
+    let cancelled = false;
+    fetchAppPageCopy(path).then((copy) => {
+      if (cancelled || !copy || Object.keys(copy).length === 0) return;
+      setPageCopy(copy);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentScreen]);
 
   useEffect(() => {
     if (!isAuthenticated && currentScreen !== 'signup' && currentScreen !== 'login') {
@@ -219,25 +253,46 @@ export default function App() {
     }
 
     setEligibilityResult(readStoredEligibilityResult());
-    navigateWithHistory('result', { trackHistory: false, replace: true });
-  };
-
-  const handleResultContinue = () => {
-    navigateWithHistory('workspace', { trackHistory: false, replace: true });
-  };
-
-  const handleResultReset = () => {
-    clearStoredEligibilityResult();
-    setEligibilityResult(null);
-    setIsAuthenticated(false);
-    setIsDemoUser(false);
-    setUserData(null);
-    setNavigationHistory([]);
-    window.location.href = '/eligibility-check/';
+    navigateWithHistory('eligibilitycheck', { trackHistory: false, replace: true });
   };
 
   const handleNavigate = (screen: Screen) => {
     navigateWithHistory(screen);
+  };
+
+  const handleWorkspaceTabChange = (tab: WorkspaceTab) => {
+    if (tab === 'eligibility-check') {
+      if (currentScreen !== 'eligibilitycheck') {
+        navigateWithHistory('eligibilitycheck', { trackHistory: false, replace: true });
+      }
+      return;
+    }
+
+    if (currentScreen !== 'workspace') {
+      navigateWithHistory('workspace', { trackHistory: false, replace: true });
+    }
+  };
+
+  const handleRepeatEligibility = () => {
+    const params = new URLSearchParams({
+      mode: 'eligibility-only',
+      destination: 'app'
+    });
+
+    if (eligibilityResult?.branch) {
+      params.set('branch', eligibilityResult.branch);
+    }
+
+    window.location.href = `/eligibility-check/?${params.toString()}`;
+  };
+
+  const eligibilityPanelData: EligibilityPanelData = {
+    visaLabel: (eligibilityResult || DEFAULT_ELIGIBILITY_RESULT).visaLabel,
+    approval: (eligibilityResult || DEFAULT_ELIGIBILITY_RESULT).approval,
+    redFlags: (eligibilityResult || DEFAULT_ELIGIBILITY_RESULT).redFlags,
+    yellowFlags: (eligibilityResult || DEFAULT_ELIGIBILITY_RESULT).yellowFlags,
+    summary: (eligibilityResult || DEFAULT_ELIGIBILITY_RESULT).summary,
+    hasStoredResult: Boolean(eligibilityResult)
   };
 
   const handleGoBack = () => {
@@ -269,6 +324,7 @@ export default function App() {
           <LoginScreen
             onLogin={handleLogin}
             onNavigateToSignUp={() => navigateWithHistory('signup')}
+            copy={pageCopy.login}
           />
         </div>
       );
@@ -284,27 +340,13 @@ export default function App() {
         <SignUpScreen
           onSignUp={handleSignUp}
           onNavigateToLogin={() => navigateWithHistory('login')}
+          copy={pageCopy.signup}
         />
       </div>
     );
   }
 
-  if (currentScreen === 'result') {
-    const data = eligibilityResult || DEFAULT_ELIGIBILITY_RESULT;
-    return (
-      <ResultPage
-        data={{
-          visaType: data.visaLabel,
-          approvalChance: data.approval,
-          hasStoredResult: Boolean(eligibilityResult)
-        }}
-        onContinue={handleResultContinue}
-        onReset={handleResultReset}
-      />
-    );
-  }
-
-  if (currentScreen === 'workspace') {
+  if (currentScreen === 'workspace' || currentScreen === 'eligibilitycheck') {
     const userInfo = userData || {
       fullName: 'Dan Fisher',
       email: 'dan.fisher@example.com',
@@ -314,6 +356,12 @@ export default function App() {
       <WorkspaceDashboard
         userName={userInfo.fullName}
         userInitials={userInfo.initials}
+        initialTab={currentScreen === 'eligibilitycheck' ? 'eligibility-check' : 'home'}
+        eligibilityData={eligibilityPanelData}
+        eligibilityCopy={pageCopy.eligibility}
+        dashboardCopy={pageCopy.dashboard}
+        onRepeatEligibility={handleRepeatEligibility}
+        onTabChange={handleWorkspaceTabChange}
         onNavigate={handleNavigate}
         onLogout={handleLogout}
       />

@@ -7,13 +7,15 @@ import { Logo } from './Logo';
 import { Switch } from './ui/switch';
 import { checkCredentials, DEMO_USER } from '../utils/constants';
 import { CircleAlert, Check, Sparkles } from 'lucide-react';
+import { LoginPageCopy } from '../utils/pageContent';
 
 interface LoginScreenProps {
   onLogin: (isDemoUser?: boolean, email?: string, password?: string) => boolean;
   onNavigateToSignUp: () => void;
+  copy?: LoginPageCopy;
 }
 
-export function LoginScreen({ onLogin, onNavigateToSignUp }: LoginScreenProps) {
+export function LoginScreen({ onLogin, onNavigateToSignUp, copy }: LoginScreenProps) {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -69,6 +71,11 @@ export function LoginScreen({ onLogin, onNavigateToSignUp }: LoginScreenProps) {
       }
     }
   };
+  const title = copy?.title || 'Welcome Back';
+  const subtitle = copy?.subtitle || 'Log in to continue your application';
+  const submitButton = copy?.submitButton || 'Log In';
+  const noAccountLabel = copy?.noAccountLabel || "Don't have an account?";
+  const signUpLinkLabel = copy?.signUpLinkLabel || 'Sign up';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-50 flex items-center justify-center p-6">
@@ -77,8 +84,8 @@ export function LoginScreen({ onLogin, onNavigateToSignUp }: LoginScreenProps) {
           <div className="flex justify-center mb-4">
             <Logo />
           </div>
-          <h1 className="mb-2">Welcome Back</h1>
-          <p className="text-sm text-gray-600">Log in to continue your application</p>
+          <h1 className="mb-2">{title}</h1>
+          <p className="text-sm text-gray-600">{subtitle}</p>
         </div>
 
         {/* Demo Mode Toggle */}
@@ -156,19 +163,19 @@ export function LoginScreen({ onLogin, onNavigateToSignUp }: LoginScreenProps) {
           </div>
 
           <Button type="submit" className="w-full">
-            Log In
+            {submitButton}
           </Button>
         </form>
 
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-600">
-            Don't have an account?{' '}
+            {noAccountLabel}{' '}
             <button
               type="button"
               onClick={onNavigateToSignUp}
               className="text-[#E9692C] hover:underline"
             >
-              Sign up
+              {signUpLinkLabel}
             </button>
           </p>
         </div>

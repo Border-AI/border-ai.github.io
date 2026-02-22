@@ -1,6 +1,7 @@
 (() => {
-  const content = window.siteContent;
+  const content = getSiteContent();
   if (!content) return;
+  window.siteContent = content;
 
   document.addEventListener('DOMContentLoaded', () => {
     const page = document.body.dataset.page;
@@ -262,7 +263,52 @@
   }
 })();
 
+function getSiteContent() {
+  if (window.siteContent) return window.siteContent;
+  const script = document.getElementById('site-content');
+  if (!script || !script.textContent) return null;
+  try {
+    return JSON.parse(script.textContent);
+  } catch {
+    return null;
+  }
+}
+
 const ELIGIBILITY_RESULT_STORAGE_KEY = 'border_ai_eligibility_result';
+const ELIGIBILITY_ONLY_MODE = 'eligibility-only';
+
+function normalizeFlowBranch(value) {
+  return value === 'study' || value === 'work' || value === 'visit' ? value : null;
+}
+
+function readStoredEligibilityResult() {
+  if (typeof window === 'undefined') return null;
+  const raw = window.localStorage.getItem(ELIGIBILITY_RESULT_STORAGE_KEY);
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw);
+    return {
+      ...parsed,
+      branch: normalizeFlowBranch(parsed.branch)
+    };
+  } catch {
+    return null;
+  }
+}
+
+function readFlowRuntimeConfig() {
+  if (typeof window === 'undefined') {
+    return { mode: null, destination: null, branch: null };
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  return {
+    mode: params.get('mode'),
+    destination: params.get('destination'),
+    branch: normalizeFlowBranch(params.get('branch'))
+  };
+}
 
 function createHighlightIcon(type) {
   const svgNS = 'http://www.w3.org/2000/svg';
@@ -321,16 +367,22 @@ function createHighlightIcon(type) {
 function initEligibilityFlow(flowContent) {
   const target = document.querySelector('[data-section="eligibility-flow"]');
   if (!target || !flowContent) return;
+  const runtime = readFlowRuntimeConfig();
+  const storedResult = readStoredEligibilityResult();
+  const defaultBranch = runtime.branch || storedResult?.branch || 'visit';
+  const isEligibilityOnlyMode = runtime.mode === ELIGIBILITY_ONLY_MODE;
 
   const state = {
-    stage: 'visa',
+    stage: isEligibilityOnlyMode ? 'eligibility' : 'visa',
     visaIndex: 0,
     eligibilityIndex: 0,
-    visaAnswers: {},
+    visaAnswers: isEligibilityOnlyMode ? { intent: defaultBranch } : {},
     eligibilityAnswers: {},
-    visaBranch: null,
-    eligibilityBranch: null,
-    resultData: null
+    visaBranch: isEligibilityOnlyMode ? defaultBranch : null,
+    eligibilityBranch: isEligibilityOnlyMode ? defaultBranch : null,
+    resultData: null,
+    eligibilityOnlyMode: isEligibilityOnlyMode,
+    postResultDestination: runtime.destination === 'app' ? 'app' : 'signup'
   };
 
   const rerender = () => {
@@ -409,6 +461,7 @@ function getVisaProgressMetrics(flowContent, state) {
   const { questions } = prepareVisaQuestions(flowContent.visaMatch, state.visaAnswers);
   const total = questions.length;
   if (!total) return { current: 0, total: 0 };
+  if (state.eligibilityOnlyMode) return { current: total, total };
 
   const visaStages = ['visa', 'visa-result', 'eligibility', 'review', 'result'];
   if (!visaStages.includes(state.stage)) {
@@ -585,7 +638,7 @@ function buildEligibilityQuestionSection(flowContent, state, rerender) {
       total: questions.length,
       answers: state.eligibilityAnswers,
       nextLabel: state.eligibilityIndex === questions.length - 1 ? 'Review answers' : 'Continue',
-      disablePrev: false,
+      disablePrev: state.eligibilityOnlyMode && state.eligibilityIndex === 0,
       onAnswer: (id, value) => {
         state.eligibilityAnswers[id] = value;
         rerender();
@@ -594,6 +647,8 @@ function buildEligibilityQuestionSection(flowContent, state, rerender) {
         if (state.eligibilityIndex > 0) {
           state.eligibilityIndex -= 1;
           rerender();
+        } else if (state.eligibilityOnlyMode) {
+          return;
         } else {
           state.stage = 'visa-result';
           rerender();
@@ -647,7 +702,31 @@ function buildReviewCard(flowContent, state, rerender) {
   seeResultButton.addEventListener('click', () => {
     const result = computeResultData(state);
     state.resultData = result;
-    persistEligibilityResult(result);
+    const visaSummaryEntries = computeVisaSummary(flowContent.visaMatch, state.visaAnswers, state.visaBranch);
+    const eligibilityQuestions = prepareEligibilityQuestions(flowContent.eligibilityCheck, state.eligibilityBranch, state.eligibilityAnswers);
+    const summary = [
+      ...buildSummaryEntries(prepareVisaQuestions(flowContent.visaMatch, state.visaAnswers).questions, state.visaAnswers, state.visaBranch),
+      ...buildSummaryEntries(eligibilityQuestions, state.eligibilityAnswers, state.eligibilityBranch)
+    ];
+    const risks = computeRiskFlags(eligibilityQuestions, state.eligibilityAnswers);
+
+    persistEligibilityResult({
+      ...result,
+      visaSummary: visaSummaryEntries,
+      summary,
+      redFlags: risks.redFlags,
+      yellowFlags: risks.yellowFlags
+    });
+
+    if (state.eligibilityOnlyMode || state.postResultDestination === 'app') {
+      if (window.top && window.top !== window) {
+        window.top.location.href = '/app/eligibilitycheck';
+      } else {
+        window.location.href = '/app/eligibilitycheck';
+      }
+      return;
+    }
+
     window.location.href = '/app/signup';
   });
 
@@ -1002,6 +1081,45 @@ function computeEligibilitySummary(flowContent, state) {
   }));
 }
 
+function buildSummaryEntries(questions, answers, branch) {
+  return questions
+    .filter((question) => {
+      if (question.id.startsWith('study-')) return branch === 'study';
+      if (question.id.startsWith('work-')) return branch === 'work';
+      if (question.id.startsWith('visit-')) return branch === 'visit';
+      return true;
+    })
+    .map((question) => ({
+      question: resolveQuestionCopy(question).sentence,
+      answer: formatAnswer(question, answers[question.id])
+    }));
+}
+
+function computeRiskFlags(questions, answers) {
+  const redFlags = [];
+  const yellowFlags = [];
+  const redPattern = /(refused|overstay|denied|inconsistent|can't|cannot|weak ties|not meet|large\/unexplained)/i;
+  const yellowPattern = /(not sure|unknown|maybe|partial|mostly|tight|unsure)/i;
+
+  questions.forEach((question) => {
+    const answer = formatAnswer(question, answers[question.id]);
+    if (!answer || answer === 'Not answered') return;
+
+    const sentence = resolveQuestionCopy(question).sentence;
+    const detail = `${sentence}: ${answer}`;
+    if (redPattern.test(answer)) {
+      redFlags.push(detail);
+    } else if (yellowPattern.test(answer)) {
+      yellowFlags.push(detail);
+    }
+  });
+
+  return {
+    redFlags,
+    yellowFlags
+  };
+}
+
 function formatAnswer(question, value) {
   if (!value || (Array.isArray(value) && !value.length)) return 'Not answered';
   if (question.type === 'textarea') return value;
@@ -1083,12 +1201,13 @@ function computeApprovalScore(branch, answers) {
 }
 
 function resetFlowState(state) {
-  state.stage = 'visa';
+  const fallbackBranch = state.visaBranch || state.eligibilityBranch || 'visit';
+  state.stage = state.eligibilityOnlyMode ? 'eligibility' : 'visa';
   state.visaIndex = 0;
   state.eligibilityIndex = 0;
-  state.visaAnswers = {};
+  state.visaAnswers = state.eligibilityOnlyMode ? { intent: fallbackBranch } : {};
   state.eligibilityAnswers = {};
-  state.visaBranch = null;
-  state.eligibilityBranch = null;
+  state.visaBranch = state.eligibilityOnlyMode ? fallbackBranch : null;
+  state.eligibilityBranch = state.eligibilityOnlyMode ? fallbackBranch : null;
   state.resultData = null;
 }
