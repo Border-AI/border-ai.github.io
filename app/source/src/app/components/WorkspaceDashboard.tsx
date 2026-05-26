@@ -7,6 +7,7 @@ import { Textarea } from './ui/textarea';
 import { TopNav } from './TopNav';
 import { BorderAIAssistant } from './BorderAIAssistant';
 import { EligibilityCheckPanel, EligibilityPanelData } from './EligibilityCheckPanel';
+import { ExpertHubPanel } from './ExpertHubPanel';
 import { DashboardPageCopy, EligibilityPageCopy } from '../utils/pageContent';
 import {
   Home,
@@ -21,10 +22,12 @@ import {
   Edit,
   Eye,
   Check,
+  CheckCircle2,
+  Circle,
   Clock,
   AlertCircle,
   Send,
-  Sparkles,
+  UsersRound,
   File,
   FileCheck,
   FileX,
@@ -38,7 +41,7 @@ import {
 } from 'lucide-react';
 import { cn } from './ui/utils';
 
-export type WorkspaceTab = 'home' | 'eligibility-check' | 'documents' | 'apply-guide';
+export type WorkspaceTab = 'home' | 'expert-hub' | 'eligibility-check' | 'documents' | 'apply-guide';
 type TaskStatus = 'todo' | 'in-progress' | 'waiting' | 'done';
 type OutputStatus = 'upload-needed' | 'generating' | 'generated' | 'uploaded';
 
@@ -125,6 +128,7 @@ export function WorkspaceDashboard({
   const [chatStatus, setChatStatus] = useState<'idle' | 'analyzing' | 'saved'>('idle');
   const [isGenerating, setIsGenerating] = useState(false);
   const homeTabLabel = dashboardCopy?.homeTabLabel || 'Home';
+  const expertHubTabLabel = dashboardCopy?.expertHubTabLabel || 'Expert Hub';
   const eligibilityTabLabel = dashboardCopy?.eligibilityTabLabel || 'Eligibility check';
   const documentsTabLabel = dashboardCopy?.documentsTabLabel || 'Documents';
   const applyGuideTabLabel = dashboardCopy?.applyGuideTabLabel || 'Apply guide';
@@ -296,6 +300,19 @@ export function WorkspaceDashboard({
       checklist: ['Click final submit button', 'Save confirmation number', 'Download receipt'],
     },
   ];
+
+  const homeActions = [
+    { label: 'how old are you?', done: true },
+    { label: 'how many years of gap do you have between previous degree and current apply?', done: true },
+    { label: 'Upload your passport', done: false },
+    { label: 'Upload your scan of previous visas and stamps pages in your current passport.', done: false },
+    { label: 'How many years of work experience do you have?', done: false },
+    { label: 'Upload IMM 5257 (Application form)', done: false },
+    { label: 'Upload your job offer letter', done: false },
+    { label: 'Upload your employment letter', done: false }
+  ];
+  const completedHomeActions = homeActions.filter((item) => item.done).length;
+  const homeProgress = Math.round((completedHomeActions / homeActions.length) * 100);
 
   const categorizedTasks = tasks.reduce((acc, task) => {
     if (!acc[task.category]) {
@@ -482,6 +499,18 @@ export function WorkspaceDashboard({
               <BookOpen className="h-5 w-5" />
               {applyGuideTabLabel}
             </button>
+            <button
+              onClick={() => handleTabSelect('expert-hub')}
+              className={cn(
+                'w-full flex items-center gap-3 px-3 py-2 rounded-md text-base transition-colors',
+                activeTab === 'expert-hub'
+                  ? 'bg-accent text-accent-foreground font-medium'
+                  : 'text-muted-foreground hover:bg-accent/50'
+              )}
+            >
+              <UsersRound className="h-5 w-5" />
+              {expertHubTabLabel}
+            </button>
           </nav>
         </div>
 
@@ -508,167 +537,47 @@ export function WorkspaceDashboard({
             />
           )}
 
+          {activeTab === 'expert-hub' && <ExpertHubPanel />}
+
           {/* Home Tab - Checklist */}
           {activeTab === 'home' && (
-            <>
-              <div className="border-b border-border bg-card px-6 py-4">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-3">
-                    <h1 className="font-semibold">Case Overview</h1>
+            <div className="flex-1 overflow-y-auto px-6 py-5">
+              <div className="mx-auto w-full max-w-4xl space-y-5">
+                <Card className="border border-border p-5">
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted/50">
+                    <div className="h-full rounded-full bg-[#E9692C] transition-all" style={{ width: `${homeProgress}%` }} />
                   </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm">
-                      <Download className="h-4 w-4 mr-2" />
-                      Export summary
-                    </Button>
-                    <Button size="sm">Continue preparation</Button>
-                  </div>
-                </div>
+                  <p className="mt-3 text-base font-medium">case progress</p>
+                </Card>
+
+                <Card className="border border-border p-5">
+                  <table className="w-full table-fixed">
+                    <thead>
+                      <tr className="text-left">
+                        <th className="pb-3 pr-4 text-sm font-semibold">Action list</th>
+                        <th className="pb-3 w-24 text-right text-sm font-semibold">status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {homeActions.map((item, index) => (
+                        <tr key={item.label}>
+                          <td className="py-2.5 pr-4 text-sm align-top">
+                            {index + 1}. {item.label}
+                          </td>
+                          <td className="py-2.5 text-right align-top">
+                            {item.done ? (
+                              <CheckCircle2 className="ml-auto h-4 w-4 text-green-600" />
+                            ) : (
+                              <Circle className="ml-auto h-4 w-4 text-muted-foreground" />
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </Card>
               </div>
-
-              <div className="flex-1 overflow-hidden flex">
-                {/* Task List Table */}
-                <div
-                  className={cn(
-                    'overflow-y-auto transition-all',
-                    selectedTask ? 'w-1/2' : 'w-full'
-                  )}
-                >
-                  {/* Table Header */}
-                  <div className="sticky top-0 bg-background border-b border-border px-6 py-3">
-                    <div className="grid grid-cols-[1fr_120px_120px_140px] gap-4 items-center">
-                      <div className="text-sm font-medium text-muted-foreground">NAME</div>
-                      <div className="text-sm font-medium text-muted-foreground">OWNER</div>
-                      <div className="text-sm font-medium text-muted-foreground">STATUS</div>
-                      <div className="text-sm font-medium text-muted-foreground">OUTPUT</div>
-                    </div>
-                  </div>
-
-                  {/* Table Rows */}
-                  <div className="px-6">
-                    {tasks.map((task) => (
-                      <div
-                        key={task.id}
-                        className={cn(
-                          'grid grid-cols-[1fr_120px_120px_140px] gap-4 items-center py-4 border-b border-border cursor-pointer transition-all duration-200',
-                          'hover:bg-accent/70 hover:shadow-sm hover:-translate-y-0.5 hover:border-accent',
-                          selectedTask?.id === task.id && 'bg-accent/30 shadow-sm'
-                        )}
-                        onClick={() => setSelectedTask(task)}
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="min-w-0">
-                            <p className="text-base font-medium truncate">{task.item}</p>
-                            <p className="text-sm text-muted-foreground">{task.category}</p>
-                          </div>
-                        </div>
-                        <div className="text-base text-muted-foreground">{task.owner}</div>
-                        <div>{getStatusBadge(task.status)}</div>
-                        <div>{getOutputBadge(task.output)}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Task Detail Panel */}
-                {selectedTask && (
-                  <div className="w-1/2 border-l border-border overflow-y-auto bg-card">
-                    <div className="sticky top-0 bg-card border-b border-border p-4 flex items-center justify-between">
-                      <h2 className="font-semibold">{selectedTask.item}</h2>
-                      <Button variant="ghost" size="sm" onClick={() => setSelectedTask(null)}>
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-
-                    <div className="p-6 space-y-6">
-                      {selectedTask.details ? (
-                        <>
-                          <div>
-                            <h3 className="text-sm font-medium mb-2">What this is</h3>
-                            <p className="text-sm text-muted-foreground">
-                              {selectedTask.details.whatItIs}
-                            </p>
-                          </div>
-
-                          <div>
-                            <h3 className="text-sm font-medium mb-2">Why it matters</h3>
-                            <p className="text-sm text-muted-foreground">
-                              {selectedTask.details.whyItMatters}
-                            </p>
-                          </div>
-
-                          <div>
-                            <h3 className="text-sm font-medium mb-2">How to prepare it</h3>
-                            <p className="text-sm text-muted-foreground">
-                              {selectedTask.details.howToPrepare}
-                            </p>
-                          </div>
-
-                          <div>
-                            <h3 className="text-sm font-medium mb-2">Common mistakes</h3>
-                            <p className="text-sm text-muted-foreground">
-                              {selectedTask.details.commonMistakes}
-                            </p>
-                          </div>
-
-                          {selectedTask.output === 'upload-needed' && (
-                            <div>
-                              <h3 className="text-sm font-medium mb-3">Upload area</h3>
-                              <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:bg-accent/50 transition-colors cursor-pointer">
-                                <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
-                                <p className="text-sm text-muted-foreground mb-1">
-                                  Drop your file here or click to upload
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  Upload your bank statement as PDF. We'll review it for required dates,
-                                  balance, and consistency.
-                                </p>
-                              </div>
-                              <p className="text-xs text-muted-foreground mt-3">
-                                If you don't have this yet, we'll tell you exactly how to obtain it.
-                              </p>
-                            </div>
-                          )}
-
-                          {selectedTask.output === 'generated' && (
-                            <div className="space-y-2">
-                              <Button variant="outline" size="sm" className="w-full">
-                                <Eye className="h-4 w-4 mr-2" />
-                                View
-                              </Button>
-                              <Button variant="outline" size="sm" className="w-full">
-                                <Edit className="h-4 w-4 mr-2" />
-                                Edit
-                              </Button>
-                              <Button variant="outline" size="sm" className="w-full">
-                                <Send className="h-4 w-4 mr-2" />
-                                Request changes
-                              </Button>
-                              <Button variant="outline" size="sm" className="w-full">
-                                <Download className="h-4 w-4 mr-2" />
-                                Download
-                              </Button>
-                            </div>
-                          )}
-
-                          <Button variant="outline" size="sm" className="w-full">
-                            <Sparkles className="h-4 w-4 mr-2" />
-                            Ask Border AI about this
-                          </Button>
-                        </>
-                      ) : (
-                        <div className="text-center py-8">
-                          <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                          <p className="text-sm text-muted-foreground">
-                            Details will be available once this task is ready.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </>
+            </div>
           )}
 
           {/* Documents Tab */}
@@ -976,7 +885,7 @@ export function WorkspaceDashboard({
         </div>
 
         {/* Right Sidebar - AI Chat */}
-        <BorderAIAssistant />
+        {activeTab !== 'expert-hub' ? <BorderAIAssistant /> : null}
       </div>
     </div>
   );

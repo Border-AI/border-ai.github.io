@@ -26,6 +26,7 @@ export interface EligibilityPageCopy {
 
 export interface DashboardPageCopy {
   homeTabLabel?: string;
+  expertHubTabLabel?: string;
   eligibilityTabLabel?: string;
   documentsTabLabel?: string;
   applyGuideTabLabel?: string;

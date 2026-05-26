@@ -14,7 +14,7 @@ import { TopNav } from './components/TopNav';
 import { DEMO_USER } from './utils/constants';
 import { AppPageCopy, fetchAppPageCopy, readInitialAppPageCopy } from './utils/pageContent';
 
-export type Screen = 'signup' | 'login' | 'plan' | 'payment' | 'eligibilitycheck' | 'workspace' | 'settings' | 'plans' | 'account' | 'help';
+export type Screen = 'signup' | 'login' | 'plan' | 'payment' | 'home' | 'eligibilitycheck' | 'experthub' | 'workspace' | 'settings' | 'plans' | 'account' | 'help';
 
 export interface IntakeData {
   goal: string;
@@ -58,7 +58,9 @@ const SCREEN_PATHS: Record<Screen, string> = {
   login: '/app/login',
   plan: '/app/plan/',
   payment: '/app/payment/',
+  home: '/app/home/',
   eligibilitycheck: '/app/eligibilitycheck',
+  experthub: '/app/experthub',
   workspace: '/app/dashboard',
   settings: '/app/dashboard',
   plans: '/app/dashboard',
@@ -98,7 +100,9 @@ function screenFromPath(pathname: string): Screen {
   if (path === '/app/login') return 'login';
   if (path === '/app/plan') return 'plan';
   if (path === '/app/payment') return 'payment';
+  if (path === '/app/home') return 'home';
   if (path === '/app/eligibilitycheck') return 'eligibilitycheck';
+  if (path === '/app/experthub') return 'experthub';
   if (path === '/app/dashboard') return 'workspace';
   return 'signup';
 }
@@ -227,7 +231,7 @@ export default function App() {
       setIsAuthenticated(true);
       setIsDemoUser(false);
       setUserData(account.userData);
-      navigateWithHistory('workspace', { trackHistory: false, replace: true });
+      navigateWithHistory('home', { trackHistory: false, replace: true });
       return true;
     }
 
@@ -240,7 +244,7 @@ export default function App() {
         initials: DEMO_USER.avatarInitials,
         profileStage1Complete: true
       });
-      navigateWithHistory('workspace', { trackHistory: false, replace: true });
+      navigateWithHistory('home', { trackHistory: false, replace: true });
       return true;
     }
 
@@ -279,9 +283,23 @@ export default function App() {
   };
 
   const handleWorkspaceTabChange = (tab: WorkspaceTab) => {
+    if (tab === 'home') {
+      if (currentScreen !== 'home') {
+        navigateWithHistory('home', { trackHistory: false, replace: true });
+      }
+      return;
+    }
+
     if (tab === 'eligibility-check') {
       if (currentScreen !== 'eligibilitycheck') {
         navigateWithHistory('eligibilitycheck', { trackHistory: false, replace: true });
+      }
+      return;
+    }
+
+    if (tab === 'expert-hub') {
+      if (currentScreen !== 'experthub') {
+        navigateWithHistory('experthub', { trackHistory: false, replace: true });
       }
       return;
     }
@@ -455,7 +473,7 @@ export default function App() {
     );
   }
 
-  if (currentScreen === 'workspace' || currentScreen === 'eligibilitycheck') {
+  if (currentScreen === 'home' || currentScreen === 'workspace' || currentScreen === 'eligibilitycheck' || currentScreen === 'experthub') {
     const userInfo = userData || {
       fullName: 'Dan Fisher',
       email: 'dan.fisher@example.com',
@@ -466,7 +484,15 @@ export default function App() {
       <WorkspaceDashboard
         userName={userInfo.fullName}
         userInitials={userInfo.initials}
-        initialTab={currentScreen === 'eligibilitycheck' || dashboardNext === 'eligibility-result' ? 'eligibility-check' : 'home'}
+        initialTab={
+          currentScreen === 'home'
+            ? 'home'
+            : currentScreen === 'experthub'
+            ? 'expert-hub'
+            : currentScreen === 'eligibilitycheck' || dashboardNext === 'eligibility-result'
+              ? 'eligibility-check'
+              : 'home'
+        }
         eligibilityData={eligibilityPanelData}
         eligibilityCopy={pageCopy.eligibility}
         dashboardCopy={pageCopy.dashboard}
