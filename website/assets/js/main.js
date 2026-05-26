@@ -11,7 +11,7 @@
     } else if (page === 'eligibility') {
       applySeo(content.pages.eligibility);
       renderEligibility(content.pages.eligibility);
-    } else {
+    } else if (!document.title) {
       document.title = content.meta.defaultTitle;
     }
   });

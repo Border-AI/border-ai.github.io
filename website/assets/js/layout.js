@@ -112,7 +112,7 @@ function buildFooter(footerContent) {
   linksColumn.appendChild(quickLabel);
   footerContent.quickLinks.forEach((link) => {
     const anchor = document.createElement('a');
-    anchor.href = link.href;
+    anchor.href = resolveSiteHref(link.href);
     anchor.textContent = link.label;
     linksColumn.appendChild(anchor);
   });
@@ -124,7 +124,7 @@ function buildFooter(footerContent) {
   otherColumn.appendChild(otherLabel);
   footerContent.otherLinks.forEach((link) => {
     const anchor = document.createElement('a');
-    anchor.href = link.href;
+    anchor.href = resolveSiteHref(link.href);
     anchor.textContent = link.label;
     otherColumn.appendChild(anchor);
   });
@@ -148,13 +148,67 @@ function buildFooter(footerContent) {
   legal.className = 'footer-legal';
   footerContent.legalText.forEach((paragraph) => {
     const p = document.createElement('p');
-    p.textContent = paragraph;
+    appendLinkedLegalText(p, paragraph);
     legal.appendChild(p);
   });
 
   container.appendChild(legal);
   footer.appendChild(container);
   return footer;
+}
+
+function appendLinkedLegalText(container, text) {
+  const linkedPhrases = [
+    { text: 'Terms and Conditions of Use', href: '/terms/' },
+    { text: 'Privacy Policy', href: '/privacy/' }
+  ];
+  const pattern = new RegExp(`(${linkedPhrases.map((item) => escapeRegExp(item.text)).join('|')})`, 'g');
+  let lastIndex = 0;
+
+  text.replace(pattern, (match, _phrase, index) => {
+    if (index > lastIndex) {
+      container.appendChild(document.createTextNode(text.slice(lastIndex, index)));
+    }
+
+    const linkedPhrase = linkedPhrases.find((item) => item.text === match);
+    const anchor = document.createElement('a');
+    anchor.href = resolveSiteHref(linkedPhrase.href);
+    anchor.textContent = match;
+    container.appendChild(anchor);
+    lastIndex = index + match.length;
+    return match;
+  });
+
+  if (lastIndex < text.length) {
+    container.appendChild(document.createTextNode(text.slice(lastIndex)));
+  }
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function resolveSiteHref(href) {
+  if (!href || !href.startsWith('/') || window.location.protocol !== 'file:') {
+    return href;
+  }
+
+  const currentPath = window.location.pathname;
+  const websiteIndex = currentPath.indexOf('/website/');
+  const sitePrefix = websiteIndex > -1 ? '/website' : '';
+  const rootPath = websiteIndex > -1 ? currentPath.slice(0, websiteIndex) : getRootPreviewPath(currentPath);
+  const [pathPart, hash = ''] = href.split('#');
+  const targetPath = pathPart === '/' ? '/index.html' : pathPart.endsWith('/') ? `${pathPart}index.html` : pathPart;
+  return `file://${rootPath}${sitePrefix}${targetPath}${hash ? `#${hash}` : ''}`;
+}
+
+function getRootPreviewPath(pathname) {
+  const sectionMatch = pathname.match(/\/(privacy|terms|eligibility-check|eligibilitycheck|app)\//);
+  if (sectionMatch) {
+    return pathname.slice(0, sectionMatch.index);
+  }
+
+  return pathname.slice(0, pathname.lastIndexOf('/'));
 }
 
 function appendBrandVisuals(anchor, brand) {
