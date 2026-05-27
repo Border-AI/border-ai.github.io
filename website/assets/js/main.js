@@ -42,22 +42,53 @@
     const wrapper = document.createElement('div');
     wrapper.className = 'hero-grid';
 
+    if (hero.image) {
+      const picture = document.createElement('picture');
+      picture.className = 'hero-media';
+
+      const mobileWebp = document.createElement('source');
+      mobileWebp.media = '(max-width: 700px)';
+      mobileWebp.type = 'image/webp';
+      mobileWebp.srcset = hero.image.mobileWebp;
+
+      const mobilePng = document.createElement('source');
+      mobilePng.media = '(max-width: 700px)';
+      mobilePng.type = 'image/png';
+      mobilePng.srcset = hero.image.mobilePng;
+
+      const desktopWebp = document.createElement('source');
+      desktopWebp.type = 'image/webp';
+      desktopWebp.srcset = hero.image.desktopWebp;
+
+      const image = document.createElement('img');
+      image.src = hero.image.desktopPng;
+      image.alt = hero.image.alt || '';
+      image.loading = 'eager';
+      image.decoding = 'async';
+
+      picture.append(mobileWebp, mobilePng, desktopWebp, image);
+      wrapper.appendChild(picture);
+    }
+
+    const content = document.createElement('div');
+    content.className = 'hero-content';
+
     if (hero.eyebrow) {
       const eyebrow = document.createElement('span');
       eyebrow.className = 'note-pill';
       eyebrow.textContent = hero.eyebrow;
-      wrapper.appendChild(eyebrow);
+      content.appendChild(eyebrow);
     }
 
     const title = document.createElement('h1');
     title.className = 'hero-title';
     title.textContent = hero.title;
-    wrapper.appendChild(title);
+    content.appendChild(title);
 
     const subtitle = document.createElement('p');
     subtitle.className = 'hero-subtitle';
     subtitle.textContent = hero.subtitle;
-    wrapper.appendChild(subtitle);
+    content.appendChild(subtitle);
 
     const actions = document.createElement('div');
     actions.className = 'hero-actions';
@@ -68,19 +99,31 @@
     primary.textContent = hero.primaryCta.label;
     actions.appendChild(primary);
 
-    const secondary = document.createElement('a');
-    secondary.className = 'btn btn-secondary';
-    secondary.href = hero.secondaryCta.href;
-    secondary.textContent = hero.secondaryCta.label;
-    actions.appendChild(secondary);
+    if (hero.secondaryCta) {
+      const secondary = document.createElement('a');
+      secondary.className = 'btn btn-secondary';
+      secondary.href = hero.secondaryCta.href;
+      secondary.textContent = hero.secondaryCta.label;
+      actions.appendChild(secondary);
+    }
 
-    wrapper.appendChild(actions);
+    content.appendChild(actions);
+    wrapper.appendChild(content);
     target.replaceChildren(wrapper);
   }
 
   function renderFeatures(features) {
     const target = document.querySelector('[data-section="features"]');
     if (!target || !Array.isArray(features)) return;
+    const wrapper = document.createElement('div');
+    wrapper.className = 'features-section';
+
+    const heading = document.createElement('div');
+    heading.className = 'section-heading';
+    const title = document.createElement('h2');
+    title.textContent = 'What we offer';
+    heading.appendChild(title);
+
     const grid = document.createElement('div');
     grid.className = 'feature-grid';
 
@@ -91,7 +134,12 @@
       const icon = document.createElement('div');
       icon.className = 'feature-icon';
       icon.setAttribute('aria-hidden', 'true');
-      icon.textContent = feature.icon || feature.title.charAt(0);
+      const iconSvg = createFeatureIcon(feature.icon);
+      if (iconSvg) {
+        icon.appendChild(iconSvg);
+      } else {
+        icon.textContent = feature.title.charAt(0);
+      }
 
       const title = document.createElement('h3');
       title.textContent = feature.title;
@@ -103,7 +151,8 @@
       grid.appendChild(card);
     });
 
-    target.replaceChildren(grid);
+    wrapper.append(heading, grid);
+    target.replaceChildren(wrapper);
   }
 
   function renderHighlights(highlights) {
@@ -198,6 +247,7 @@
     if (!target || !pricing) return;
 
     const heading = document.createElement('div');
+    heading.className = 'section-heading';
     const title = document.createElement('h2');
     title.textContent = pricing.heading;
     heading.appendChild(title);
@@ -354,50 +404,108 @@ function createHighlightIcon(type) {
   const svg = document.createElementNS(svgNS, 'svg');
   svg.setAttribute('viewBox', '0 0 24 24');
   svg.setAttribute('fill', 'none');
-  svg.setAttribute('stroke', 'currentColor');
-  svg.setAttribute('stroke-width', '1.5');
+  svg.setAttribute('stroke', 'var(--color-text)');
+  svg.setAttribute('stroke-width', '1.35');
   svg.setAttribute('stroke-linecap', 'round');
   svg.setAttribute('stroke-linejoin', 'round');
+  svg.setAttribute('aria-hidden', 'true');
 
-  const appendChild = (el) => svg.appendChild(el);
+  const makeSvgEl = (tag, attrs = {}) => {
+    const el = document.createElementNS(svgNS, tag);
+    Object.entries(attrs).forEach(([key, value]) => {
+      el.setAttribute(key, value);
+    });
+    return el;
+  };
 
   if (type === 'target') {
-    const circles = [10, 6, 3].map((radius) => {
-      const circle = document.createElementNS(svgNS, 'circle');
-      circle.setAttribute('cx', '12');
-      circle.setAttribute('cy', '12');
-      circle.setAttribute('r', radius.toString());
-      circle.setAttribute('stroke-opacity', radius === 3 ? '1' : '0.85');
-      return circle;
-    });
-    circles.forEach(appendChild);
+    svg.append(
+      makeSvgEl('circle', { cx: '12', cy: '12', r: '8.2', fill: 'var(--color-surface)' }),
+      makeSvgEl('circle', { cx: '12', cy: '12', r: '5.2', stroke: 'var(--color-primary)' }),
+      makeSvgEl('path', { d: 'M9.4 12.1l1.8 1.8 3.8-4.1', stroke: 'var(--color-primary)', 'stroke-width': '1.85' }),
+      makeSvgEl('path', { d: 'M12 3.8V2.4M12 21.6v-1.4M3.8 12H2.4M21.6 12h-1.4', stroke: 'var(--color-muted)' }),
+      makeSvgEl('path', { d: 'M17.8 6.2l1-1M5.2 18.8l1-1M6.2 6.2l-1-1M18.8 18.8l-1-1', stroke: 'var(--color-muted)' })
+    );
   } else if (type === 'folder') {
-    const body = document.createElementNS(svgNS, 'path');
-    body.setAttribute('d', 'M3 7h7l2 2h9v8a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7z');
-    const tab = document.createElementNS(svgNS, 'path');
-    tab.setAttribute('d', 'M3 7V5a1 1 0 0 1 1-1h5l2 2h4');
-    [body, tab].forEach(appendChild);
+    svg.append(
+      makeSvgEl('path', { d: 'M3 1.9h11.4l5.8 5.8v14.4H3z', fill: 'var(--color-surface)' }),
+      makeSvgEl('path', { d: 'M14.4 1.9v5.8h5.8', stroke: 'var(--color-text)' }),
+      makeSvgEl('path', { d: 'M8 10.2h7.6M8 13.7h7.6M8 17.2h4.4', stroke: 'var(--color-muted)' }),
+      makeSvgEl('path', { d: 'M5.9 10.2h.1M5.9 13.7h.1M5.9 17.2h.1', stroke: 'var(--color-primary)', 'stroke-width': '2.2' }),
+      makeSvgEl('rect', { x: '15.4', y: '16.6', width: '6.2', height: '6.2', rx: '.9', fill: 'var(--color-surface)', stroke: 'var(--color-text)' }),
+      makeSvgEl('path', { d: 'M16.7 19.7l1.3 1.3 2.5-2.8', stroke: 'var(--color-primary)', 'stroke-width': '1.75' })
+    );
   } else if (type === 'graph') {
-    const lines = [
-      { x1: 5, y1: 12, x2: 5, y2: 19 },
-      { x1: 10, y1: 9, x2: 10, y2: 19 },
-      { x1: 15, y1: 5, x2: 15, y2: 19 },
-      { x1: 20, y1: 14, x2: 20, y2: 19 }
-    ];
-    lines.forEach(({ x1, y1, x2, y2 }) => {
-      const line = document.createElementNS(svgNS, 'line');
-      line.setAttribute('x1', x1.toString());
-      line.setAttribute('y1', y1.toString());
-      line.setAttribute('x2', x2.toString());
-      line.setAttribute('y2', y2.toString());
-      appendChild(line);
-    });
+    svg.append(
+      makeSvgEl('circle', { cx: '12', cy: '4.9', r: '3.5', fill: 'var(--color-surface)', stroke: 'var(--color-primary)' }),
+      makeSvgEl('circle', { cx: '5.2', cy: '18.2', r: '3.5', fill: 'var(--color-surface)' }),
+      makeSvgEl('circle', { cx: '18.8', cy: '18.2', r: '3.5', fill: 'var(--color-surface)' }),
+      makeSvgEl('path', { d: 'M12 8.4v3.4M12 11.8H5.2v2.9M12 11.8h6.8v2.9', stroke: 'var(--color-muted)' }),
+      makeSvgEl('path', { d: 'M10.8 4.9l.8.8 1.7-1.8', stroke: 'var(--color-primary)', 'stroke-width': '1.7' }),
+      makeSvgEl('path', { d: 'M4 18.2l.8.8 1.7-1.8M17.6 18.2l.8.8 1.7-1.8', stroke: 'var(--color-primary)', 'stroke-width': '1.7' })
+    );
   } else {
-    const circle = document.createElementNS(svgNS, 'circle');
-    circle.setAttribute('cx', '12');
-    circle.setAttribute('cy', '12');
-    circle.setAttribute('r', '9');
-    appendChild(circle);
+    svg.appendChild(makeSvgEl('circle', { cx: '12', cy: '12', r: '9', fill: 'var(--color-surface)' }));
+  }
+
+  return svg;
+}
+
+function createFeatureIcon(type) {
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(svgNS, 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'var(--color-text)');
+  svg.setAttribute('stroke-width', '1.35');
+  svg.setAttribute('stroke-linecap', 'round');
+  svg.setAttribute('stroke-linejoin', 'round');
+  svg.setAttribute('aria-hidden', 'true');
+
+  const makeSvgEl = (tag, attrs = {}) => {
+    const el = document.createElementNS(svgNS, tag);
+    Object.entries(attrs).forEach(([key, value]) => {
+      el.setAttribute(key, value);
+    });
+    return el;
+  };
+
+  if (type === 'eligibility') {
+    svg.append(
+      makeSvgEl('circle', { cx: '12', cy: '12', r: '8.2', fill: 'var(--color-surface)' }),
+      makeSvgEl('path', { d: 'M8.5 12l2.3 2.3 4.8-5.2', stroke: 'var(--color-primary)', 'stroke-width': '1.8' }),
+      makeSvgEl('path', { d: 'M12 5.2v2M12 18.8v-2M5.2 12h2M18.8 12h-2', stroke: 'var(--color-muted)' })
+    );
+  } else if (type === 'advisor') {
+    svg.append(
+      makeSvgEl('circle', { cx: '8.5', cy: '10.3', r: '2.6', fill: 'var(--color-surface)' }),
+      makeSvgEl('path', { d: 'M4.6 18.7a4.2 4.2 0 0 1 7.8 0', stroke: 'var(--color-text)' }),
+      makeSvgEl('circle', { cx: '16.2', cy: '7.4', r: '2.2', fill: 'color-mix(in srgb, var(--color-primary) 14%, var(--color-surface))', stroke: 'var(--color-primary)' }),
+      makeSvgEl('path', { d: 'M13.1 15.9a3.5 3.5 0 0 1 6.2 0', stroke: 'var(--color-primary)' })
+    );
+  } else if (type === 'checklist') {
+    svg.append(
+      makeSvgEl('rect', { x: '5.2', y: '3.5', width: '13.6', height: '17', rx: '2', fill: 'var(--color-surface)' }),
+      makeSvgEl('path', { d: 'M9 2.6h6v2.7H9z', fill: 'color-mix(in srgb, var(--color-primary) 18%, var(--color-surface))', stroke: 'var(--color-primary)' }),
+      makeSvgEl('path', { d: 'M8.2 10.4l.9.9 1.7-1.9M8.2 14l.9.9 1.7-1.9', stroke: 'var(--color-primary)', 'stroke-width': '1.65' }),
+      makeSvgEl('path', { d: 'M12.5 10.3h3.6M12.5 14h3.6M8.2 17.4h7.9', stroke: 'var(--color-muted)' })
+    );
+  } else if (type === 'documents') {
+    svg.append(
+      makeSvgEl('path', { d: 'M4.1 6.2h5.6l1.5 1.7h6.6v9.4a1.5 1.5 0 0 1-1.5 1.5H5.6a1.5 1.5 0 0 1-1.5-1.5z', fill: 'var(--color-surface)', stroke: 'var(--color-text)' }),
+      makeSvgEl('path', { d: 'M6.2 8.9h6l1.6 1.8h6.1v8.1a1.5 1.5 0 0 1-1.5 1.5H7.7a1.5 1.5 0 0 1-1.5-1.5z', fill: 'color-mix(in srgb, var(--color-primary) 14%, var(--color-surface))', stroke: 'var(--color-primary)' }),
+      makeSvgEl('path', { d: 'M9.1 13.2h7.1M9.1 16h5', stroke: 'var(--color-muted)' })
+    );
+  } else if (type === 'status') {
+    svg.append(
+      makeSvgEl('circle', { cx: '12', cy: '12', r: '8.2', fill: 'var(--color-surface)' }),
+      makeSvgEl('path', { d: 'M12 7.2v5.1l3.4 2', stroke: 'var(--color-text)', 'stroke-width': '1.55' }),
+      makeSvgEl('path', { d: 'M6.3 12H4.8M19.2 12h-1.5M12 4.8V3.3', stroke: 'var(--color-muted)' }),
+      makeSvgEl('path', { d: 'M7.3 18.1l-1.1 1.1M16.7 18.1l1.1 1.1', stroke: 'var(--color-primary)' }),
+      makeSvgEl('circle', { cx: '12', cy: '12', r: '1', fill: 'var(--color-primary)', stroke: 'none' })
+    );
+  } else {
+    return null;
   }
 
   return svg;

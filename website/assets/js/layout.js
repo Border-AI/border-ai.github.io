@@ -64,19 +64,49 @@ function buildNav(navContent, navLinks) {
   appendBrandVisuals(brandLink, navContent.brand);
   inner.appendChild(brandLink);
 
+  const menuId = 'primary-nav-links';
   const linksWrapper = document.createElement('div');
   linksWrapper.className = 'nav-links';
+  linksWrapper.id = menuId;
+  const actionsWrapper = document.createElement('div');
+  actionsWrapper.className = 'nav-actions';
 
   navContent.links.forEach((item) => {
     const link = document.createElement('a');
     link.href = item.href;
     link.textContent = item.label;
     link.dataset.nav = 'link';
-    linksWrapper.appendChild(link);
+    if (item.label === 'Log in / sign up') {
+      link.classList.add('nav-action');
+      actionsWrapper.appendChild(link);
+
+      const mobileLink = link.cloneNode(true);
+      mobileLink.classList.add('nav-action-mobile');
+      linksWrapper.appendChild(mobileLink);
+      navLinks.push(mobileLink);
+    } else {
+      linksWrapper.appendChild(link);
+    }
     navLinks.push(link);
   });
 
+  const menuToggle = document.createElement('button');
+  menuToggle.className = 'nav-menu-toggle';
+  menuToggle.type = 'button';
+  menuToggle.setAttribute('aria-label', 'Open navigation menu');
+  menuToggle.setAttribute('aria-controls', menuId);
+  menuToggle.setAttribute('aria-expanded', 'false');
+  menuToggle.innerHTML = '<span></span><span></span><span></span>';
+
+  menuToggle.addEventListener('click', () => {
+    const isOpen = nav.classList.toggle('is-menu-open');
+    menuToggle.setAttribute('aria-expanded', String(isOpen));
+    menuToggle.setAttribute('aria-label', isOpen ? 'Close navigation menu' : 'Open navigation menu');
+  });
+
   inner.appendChild(linksWrapper);
+  inner.appendChild(actionsWrapper);
+  inner.appendChild(menuToggle);
   nav.appendChild(inner);
   return nav;
 }
@@ -136,10 +166,19 @@ function buildFooter(footerContent) {
   contactLabel.textContent = footerContent.contact.label;
   const address = document.createElement('p');
   address.textContent = footerContent.contact.address;
-  const emailLink = document.createElement('a');
-  emailLink.href = `mailto:${footerContent.contact.email}`;
-  emailLink.textContent = `${footerContent.contact.emailLabel}: ${footerContent.contact.email}`;
-  contactColumn.append(contactLabel, address, emailLink);
+  contactColumn.append(contactLabel, address);
+
+  if (footerContent.contact.linkLabel && footerContent.contact.linkHref) {
+    const contactLink = document.createElement('a');
+    contactLink.href = resolveSiteHref(footerContent.contact.linkHref);
+    contactLink.textContent = footerContent.contact.linkLabel;
+    contactColumn.appendChild(contactLink);
+  } else if (footerContent.contact.email) {
+    const emailLink = document.createElement('a');
+    emailLink.href = `mailto:${footerContent.contact.email}`;
+    emailLink.textContent = `${footerContent.contact.emailLabel}: ${footerContent.contact.email}`;
+    contactColumn.appendChild(emailLink);
+  }
 
   grid.append(brand, linksColumn, otherColumn, contactColumn);
   container.appendChild(grid);
