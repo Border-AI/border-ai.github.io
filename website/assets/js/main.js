@@ -120,9 +120,12 @@
 
     const heading = document.createElement('div');
     heading.className = 'section-heading';
+    const eyebrow = document.createElement('span');
+    eyebrow.className = 'note-pill';
+    eyebrow.textContent = 'Features';
     const title = document.createElement('h2');
-    title.textContent = 'What we offer';
-    heading.appendChild(title);
+    appendGradientHeading(title, 'What we offer');
+    heading.append(eyebrow, title);
 
     const grid = document.createElement('div');
     grid.className = 'feature-grid';
@@ -174,7 +177,7 @@
 
     if (highlights.title) {
       const heading = document.createElement('h2');
-      heading.textContent = highlights.title;
+      appendGradientHeading(heading, highlights.title);
       intro.appendChild(heading);
     }
 
@@ -207,7 +210,21 @@
         const description = document.createElement('p');
         description.textContent = card.description;
 
-        cardEl.append(iconWrap, title, description);
+        const body = document.createElement('div');
+        body.className = 'highlight-card-body';
+        body.append(title, description);
+
+        if (Array.isArray(card.details) && card.details.length) {
+          const detailList = document.createElement('ul');
+          card.details.forEach((detail) => {
+            const item = document.createElement('li');
+            item.textContent = detail;
+            detailList.appendChild(item);
+          });
+          body.appendChild(detailList);
+        }
+
+        cardEl.append(iconWrap, body);
         grid.appendChild(cardEl);
       });
 
@@ -224,7 +241,7 @@
     card.className = 'cta-card';
 
     const heading = document.createElement('h2');
-    heading.textContent = callout.heading;
+    appendGradientHeading(heading, callout.heading);
     card.appendChild(heading);
 
     if (callout.body) {
@@ -249,7 +266,7 @@
     const heading = document.createElement('div');
     heading.className = 'section-heading';
     const title = document.createElement('h2');
-    title.textContent = pricing.heading;
+    appendGradientHeading(title, pricing.heading);
     heading.appendChild(title);
 
     if (pricing.subheading) {
@@ -509,6 +526,23 @@ function createFeatureIcon(type) {
   }
 
   return svg;
+}
+
+function appendGradientHeading(element, text) {
+  const cleanText = String(text || '').trim();
+  if (!cleanText) return;
+
+  const match = cleanText.match(/^(.*\S)\s+(\S+)$/);
+  if (!match) {
+    element.textContent = cleanText;
+    return;
+  }
+
+  element.append(document.createTextNode(`${match[1]} `));
+  const accent = document.createElement('span');
+  accent.className = 'heading-gradient';
+  accent.textContent = match[2];
+  element.appendChild(accent);
 }
 
 function initEligibilityFlow(flowContent) {

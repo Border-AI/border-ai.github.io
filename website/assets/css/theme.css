@@ -1,14 +1,22 @@
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap");
+
 :root {
   --color-bg: #fdf9f6;
   --color-surface: #ffffff;
   --color-text: #151515;
   --color-muted: #5f5f5f;
   --color-primary: #d9713d;
-  --color-border: #eadfd8;
-  --color-accent: #fbe6da;
+  --color-border: #f0ded3;
+  --color-accent: #fff1e9;
+  --background: var(--color-bg);
+  --foreground: var(--color-text);
+  --primary: var(--color-primary);
+  --accent: var(--color-accent);
+  --muted: var(--color-muted);
+  --border: var(--color-border);
   --radius: 0.75rem;
-  --shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
-  --font-sans: "Inter", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --shadow: 0 18px 38px color-mix(in srgb, var(--color-border) 54%, transparent);
+  --font-sans: "Montserrat", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   --font-size-xs: 0.85rem;
   --font-size-sm: 0.95rem;
   --font-size-base: 1rem;
@@ -38,8 +46,8 @@
     --color-muted: #bcbcbc;
     --color-primary: #f08d58;
     --color-border: #333333;
-    --color-accent: #2a1f1a;
-    --shadow: 0 25px 45px rgba(0, 0, 0, 0.7);
+    --color-accent: #3a251b;
+    --shadow: 0 18px 38px color-mix(in srgb, var(--color-border) 42%, transparent);
   }
 }
 
