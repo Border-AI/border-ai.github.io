@@ -249,11 +249,15 @@
 .hero-media::after {
   content: "";
   position: absolute;
-  inset: 0;
+  inset: 0 auto 0 0;
+  width: min(62rem, 68vw);
   background:
-    radial-gradient(ellipse at 18% 46%, color-mix(in srgb, var(--background) 82%, transparent) 0, transparent 36rem),
-    radial-gradient(ellipse at 45% 54%, color-mix(in srgb, var(--background) 44%, transparent) 0, transparent 38rem),
+    radial-gradient(ellipse at 20% 60%, color-mix(in srgb, var(--background) 82%, transparent) 0, transparent 32rem),
+    radial-gradient(ellipse at 42% 58%, color-mix(in srgb, var(--background) 48%, transparent) 0, transparent 36rem),
     radial-gradient(circle at 86% 18%, color-mix(in srgb, var(--accent) 28%, transparent) 0, transparent 30rem);
+  backdrop-filter: blur(1.6px);
+  -webkit-mask-image: linear-gradient(90deg, var(--foreground) 0%, var(--foreground) 48%, transparent 100%);
+  mask-image: linear-gradient(90deg, var(--foreground) 0%, var(--foreground) 48%, transparent 100%);
 }
 
 .hero-media img {
@@ -281,6 +285,20 @@
   font-size: var(--font-size-lg);
   font-weight: 400;
   margin-bottom: var(--space-xl);
+  position: relative;
+  isolation: isolate;
+}
+
+.hero-subtitle::before {
+  content: "";
+  position: absolute;
+  inset: -0.55rem -0.75rem;
+  z-index: -1;
+  border-radius: 999px;
+  background:
+    radial-gradient(ellipse at 42% 52%, color-mix(in srgb, var(--background) 74%, transparent) 0, transparent 17rem),
+    radial-gradient(ellipse at 62% 54%, color-mix(in srgb, var(--accent) 38%, transparent) 0, transparent 14rem);
+  filter: blur(8px);
 }
 
 .hero-actions {
@@ -351,10 +369,13 @@
   }
 
   .hero-media::after {
+    width: 100%;
     background:
-      radial-gradient(ellipse at 50% 34%, color-mix(in srgb, var(--background) 70%, transparent) 0, transparent 20rem),
-      radial-gradient(ellipse at 50% 62%, color-mix(in srgb, var(--background) 46%, transparent) 0, transparent 24rem),
+      radial-gradient(ellipse at 50% 52%, color-mix(in srgb, var(--background) 68%, transparent) 0, transparent 20rem),
+      radial-gradient(ellipse at 50% 68%, color-mix(in srgb, var(--background) 48%, transparent) 0, transparent 24rem),
       radial-gradient(circle at 82% 88%, color-mix(in srgb, var(--accent) 26%, transparent) 0, transparent 16rem);
+    -webkit-mask-image: linear-gradient(180deg, var(--foreground) 0%, var(--foreground) 68%, transparent 100%);
+    mask-image: linear-gradient(180deg, var(--foreground) 0%, var(--foreground) 68%, transparent 100%);
   }
 
 }
@@ -553,15 +574,16 @@
 }
 
 .cta-card .btn-secondary {
-  background-color: var(--color-surface);
-  border-color: var(--color-surface);
-  color: var(--color-primary);
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-surface);
 }
 
 .cta-card .btn-secondary:hover,
 .cta-card .btn-secondary:focus-visible {
-  background-color: color-mix(in srgb, var(--color-surface) 88%, var(--color-primary) 12%);
-  color: color-mix(in srgb, var(--color-primary) 76%, var(--foreground) 24%);
+  background-color: color-mix(in srgb, var(--color-primary) 88%, var(--foreground) 12%);
+  border-color: color-mix(in srgb, var(--color-primary) 88%, var(--foreground) 12%);
+  color: var(--color-surface);
 }
 
 .pricing-grid {
@@ -710,7 +732,7 @@
   gap: var(--space-xxs);
   border-radius: 999px;
   border: 0;
-  background-color: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface) 90%);
+  background-color: color-mix(in srgb, var(--color-primary) 18%, var(--color-surface) 82%);
   padding: calc(var(--space-xs) * 1.2) calc(var(--space-md) * 1.25);
   color: var(--color-primary);
   font-size: calc(var(--font-size-sm) * 1.15);
@@ -752,7 +774,7 @@
   justify-content: center;
   margin: 0 0 var(--space-sm);
   border-radius: 999px;
-  background-color: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface) 90%);
+  background-color: color-mix(in srgb, var(--color-primary) 18%, var(--color-surface) 82%);
   color: var(--color-primary);
   padding: calc(var(--space-xs) * 1.2) calc(var(--space-md) * 1.25);
   font-size: calc(var(--font-size-sm) * 1.15);
